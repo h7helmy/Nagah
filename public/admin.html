@@ -12,6 +12,8 @@
   .row{display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;}
   .btn{cursor:pointer; border:none; border-radius:8px; padding:8px 14px; font-size:13px; font-weight:600;}
   .approve{background:#16a34a; color:#fff;} .reject{background:#dc2626; color:#fff;} .delete{background:#374151; color:#fff;}
+  .suspend{background:#b45309; color:#fff;} .activate{background:#0d9488; color:#fff;} .reset{background:#4338ca; color:#fff;}
+  .sub-ok{color:#16a34a; font-weight:700;} .sub-bad{color:#dc2626; font-weight:700;}
   input{padding:8px 10px; border:1px solid #e5e7eb; border-radius:8px; font-size:13px;}
   .empty{text-align:center; color:#6b7280; padding:30px;}
   .name{font-weight:700;} .tag{color:#2563eb; font-size:12px;} .tag-center{color:#a21caf;}
@@ -58,11 +60,14 @@ async function load(){
           <div style="font-size:13px; color:#6b7280;">📍 ${p.country}${p.area ? " - "+p.area : ""} | ${p.price} | 📞 ${p.phone} | ${modeLabel(p.mode)} | ${p.group_type==='group' ? 'مجموعة حتى '+p.max_students : 'فردي'} | دفع ${p.payment_method==='cash'?'نقدي':'تحويل'}</div>
           <div style="font-size:12px; color:#6b7280; margin-top:4px;">${p.degree||""} ${p.experience_years?('- '+p.experience_years+' سنوات خبرة'):''} | جنسية: ${p.nationality||"-"} | ميلاد: ${p.dob||"-"}</div>
           <div style="font-size:12px; color:#6b7280; margin-top:4px;">🕒 ${(p.availability_days&&p.availability_days.length) ? p.availability_days.join("، ") : "لم يحدد أيام"} ${(p.availability_from&&p.availability_to) ? ('| '+p.availability_from+' - '+p.availability_to) : ""}</div>
+          ${p.subscription_start ? `<div style="font-size:12px; margin-top:4px;" class="${p.expired?'sub-bad':'sub-ok'}">📅 الاشتراك: من ${p.subscription_start.slice(0,10)} لحد ${p.subscription_end.slice(0,10)} — ${p.expired ? 'منتهي' : (p.days_left+' يوم متبقي')} ${p.active===false ? '(موقوف يدويًا)' : ''}</div>` : `<div style="font-size:12px; color:#6b7280; margin-top:4px;">📅 الاشتراك هيبدأ بمجرد القبول</div>`}
           <div style="font-size:12px; color:#6b7280; margin-top:4px;">${p.bio||""}</div>
         </div>
         <div style="display:flex; gap:6px; flex-wrap:wrap;">
           ${currentStatus!=="approved" ? `<button class="btn approve" onclick="act(${p.id},'approve')">قبول</button>` : ""}
           ${currentStatus!=="rejected" ? `<button class="btn reject" onclick="act(${p.id},'reject')">رفض</button>` : ""}
+          ${currentStatus==="approved" ? (p.active===false ? `<button class="btn activate" onclick="act(${p.id},'activate')">تفعيل الاشتراك</button>` : `<button class="btn suspend" onclick="act(${p.id},'suspend')">إيقاف الاشتراك</button>`) : ""}
+          <button class="btn reset" onclick="resetPw(${p.id})">إعادة ضبط كلمة السر</button>
           <button class="btn delete" onclick="del(${p.id})">حذف نهائي</button>
         </div>
       </div>
@@ -72,6 +77,14 @@ async function act(id, action){
   const key = localStorage.getItem("nagah_admin_key") || document.getElementById("key").value;
   await fetch(`/api/admin/providers/${id}/${action}`, { method:"POST", headers: { "x-admin-key": key } });
   load();
+}
+async function resetPw(id){
+  if(!confirm("هيتم توليد كلمة سر جديدة عشوائية لهذا الحساب. متأكد؟")) return;
+  const key = localStorage.getItem("nagah_admin_key") || document.getElementById("key").value;
+  const res = await fetch(`/api/admin/providers/${id}/reset-password`, { method:"POST", headers: { "x-admin-key": key } });
+  const data = await res.json();
+  if(data.new_password){ alert("كلمة السر الجديدة: "+data.new_password+"\nابعتها للمدرس/المركز بنفسك (واتساب/إيميل)."); }
+  else { alert("حصل خطأ: "+(data.error||"غير معروف")); }
 }
 async function del(id){
   if(!confirm("متأكد إنك عايز تحذف ده نهائيًا؟ هيتحذف مع تقييماته وحجوزاته.")) return;

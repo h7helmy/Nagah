@@ -1,5 +1,7 @@
 const express = require("express");
 const path = require("path");
+const bcrypt = require("bcryptjs");
+const crypto = require("crypto");
 const { state, save } = require("./db");
 
 const app = express();
@@ -7,6 +9,30 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
 const ADMIN_KEY = process.env.ADMIN_KEY || "admin123";
+const FREE_SUBSCRIPTION_DAYS = 365;
+
+function subscriptionInfo(p) {
+  const now = Date.now();
+  const end = p.subscription_end ? new Date(p.subscription_end).getTime() : null;
+  const expired = end ? now > end : false;
+  const daysLeft = end ? Math.max(0, Math.ceil((end - now) / 86400000)) : null;
+  return {
+    subscription_start: p.subscription_start || null,
+    subscription_end: p.subscription_end || null,
+    active: p.active !== false,
+    expired,
+    days_left: daysLeft,
+  };
+}
+function stripPrivate(p) {
+  const { password_hash, ...rest } = p;
+  return { ...rest, ...subscriptionInfo(p) };
+}
+function isLive(p) {
+  const now = Date.now();
+  const end = p.subscription_end ? new Date(p.subscription_end).getTime() : null;
+  return p.active !== false && (!end || now <= end);
+}
 
 function ratingOf(providerId) {
   const rs = state.reviews.filter((r) => r.provider_id === providerId);
@@ -15,7 +41,7 @@ function ratingOf(providerId) {
   return { rating: Math.round(avg * 10) / 10, reviewCount: cnt };
 }
 function withRating(p) {
-  return { ...p, ...ratingOf(p.id) };
+  return { ...stripPrivate(p), ...ratingOf(p.id) };
 }
 
 app.get("/health", (req, res) => res.json({ ok: true }));
@@ -28,7 +54,7 @@ app.get("/api/providers", (req, res) => {
   const groupType = (req.query.group_type || "").trim(); // individual | group
   const type = (req.query.type || "").trim(); // tutor | center
 
-  let rows = state.providers.filter((p) => p.status === "approved").map(withRating);
+  let rows = state.providers.filter((p) => p.status === "approved" && isLive(p)).map(withRating);
 
   if (q) {
     const words = q.split(/\s+/).filter(Boolean);
@@ -49,7 +75,7 @@ app.get("/api/providers", (req, res) => {
 // ---------- provider detail (+ contact reveal gated by seeker_id) ----------
 app.get("/api/providers/:id", (req, res) => {
   const id = parseInt(req.params.id, 10);
-  const p = state.providers.find((x) => x.id === id && x.status === "approved");
+  const p = state.providers.find((x) => x.id === id && x.status === "approved" && isLive(x));
   if (!p) return res.status(404).json({ error: "غير موجود" });
   const full = withRating(p);
   const reviews = state.reviews
@@ -70,6 +96,7 @@ app.post("/api/providers", (req, res) => {
     type, name, username, phone, email, country, area, nationality, dob,
     subject, degree, experience_years, mode, group_type, max_students,
     price, payment_method, bio, availability_days, availability_from, availability_to,
+    password,
   } = req.body || {};
 
   if (!["tutor", "center"].includes(type)) {
@@ -77,6 +104,9 @@ app.post("/api/providers", (req, res) => {
   }
   if (!name || !phone || !email || !country || !nationality || !dob || !subject || !price) {
     return res.status(400).json({ error: "البيانات الأساسية (الاسم، الهاتف، الإيميل، الدولة، الجنسية، تاريخ الميلاد، التخصص، السعر) مطلوبة" });
+  }
+  if (!password || String(password).length < 6) {
+    return res.status(400).json({ error: "كلمة السر مطلوبة ولازم تكون 6 حروف/أرقام على الأقل" });
   }
   if (state.providers.some((p) => p.phone === phone)) {
     return res.status(409).json({ error: "رقم الهاتف ده مسجل بالفعل" });
@@ -106,6 +136,8 @@ app.post("/api/providers", (req, res) => {
     price: parseFloat(price) || 0, payment_method, bio: bio || "",
     availability_days: Array.isArray(availability_days) ? availability_days : [],
     availability_from: availability_from || "", availability_to: availability_to || "",
+    password_hash: bcrypt.hashSync(String(password), 10),
+    subscription_start: null, subscription_end: null, active: true,
     status: "pending", created_at: new Date().toISOString(),
   };
   state.providers.push(p);
@@ -214,14 +246,43 @@ function requireAdmin(req, res, next) {
 }
 app.get("/api/admin/providers", requireAdmin, (req, res) => {
   const status = req.query.status || "pending";
-  const rows = state.providers.filter((p) => p.status === status).sort((a, b) => b.id - a.id);
+  const rows = state.providers.filter((p) => p.status === status).sort((a, b) => b.id - a.id).map(stripPrivate);
   res.json(rows);
 });
 app.post("/api/admin/providers/:id/approve", requireAdmin, (req, res) => {
   const id = parseInt(req.params.id, 10);
   const p = state.providers.find((x) => x.id === id);
-  if (p) { p.status = "approved"; save(); }
+  if (p) {
+    p.status = "approved";
+    if (!p.subscription_start) {
+      p.subscription_start = new Date().toISOString();
+      p.subscription_end = new Date(Date.now() + FREE_SUBSCRIPTION_DAYS * 86400000).toISOString();
+    }
+    p.active = true;
+    save();
+  }
   res.json({ ok: true });
+});
+app.post("/api/admin/providers/:id/suspend", requireAdmin, (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const p = state.providers.find((x) => x.id === id);
+  if (p) { p.active = false; save(); }
+  res.json({ ok: true });
+});
+app.post("/api/admin/providers/:id/activate", requireAdmin, (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const p = state.providers.find((x) => x.id === id);
+  if (p) { p.active = true; save(); }
+  res.json({ ok: true });
+});
+app.post("/api/admin/providers/:id/reset-password", requireAdmin, (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const p = state.providers.find((x) => x.id === id);
+  if (!p) return res.status(404).json({ error: "غير موجود" });
+  const newPassword = crypto.randomBytes(4).toString("hex"); // 8 حروف
+  p.password_hash = bcrypt.hashSync(newPassword, 10);
+  save();
+  res.json({ ok: true, new_password: newPassword });
 });
 app.post("/api/admin/providers/:id/reject", requireAdmin, (req, res) => {
   const id = parseInt(req.params.id, 10);

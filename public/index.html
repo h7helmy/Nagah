@@ -142,6 +142,7 @@
         <div class="field"><label>البريد الإلكتروني</label><input required type="email" id="pr-email"></div>
         <div class="field"><label>الجنسية</label><input required id="pr-nat"></div>
       </div>
+      <div class="field"><label>كلمة السر (6 حروف/أرقام على الأقل)</label><input required type="password" minlength="6" id="pr-password"></div>
       <div class="field-row">
         <div class="field"><label>تاريخ الميلاد</label><input required type="date" id="pr-dob"></div>
         <div class="field"><label>الدولة</label><select required id="pr-country" onchange="onCountryChange('pr-country','pr-area')"></select></div>
@@ -471,6 +472,7 @@ document.getElementById("provider-form").addEventListener("submit", async e=>{
       mode: v("pr-mode"), group_type: v("pr-group"), max_students: v("pr-maxstudents"),
       price: v("pr-price"), payment_method: v("pr-payment"), bio: v("pr-bio"),
       availability_days: selectedDays, availability_from: v("pr-from"), availability_to: v("pr-to"),
+      password: v("pr-password"),
     })});
     showToast("تم إرسال طلب التسجيل! هنراجع بياناتك خلال 24-48 ساعة");
     e.target.reset();
