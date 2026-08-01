@@ -12,6 +12,18 @@ const ADMIN_KEY = process.env.ADMIN_KEY || "admin123";
 const FREE_SUBSCRIPTION_DAYS = 365;
 const FREE_TUTOR_LIMIT = 100; // أول 100 معلم/معلمة بياخدوا سنة مجانية أوتوماتيك
 
+// إنشاء حساب سوبر أدمن افتراضي أول مرة (لو مفيش حساب سوبر أدمن محفوظ خالص)
+if (state.admins.length === 0) {
+  const seedUsername = process.env.SUPER_ADMIN_USERNAME || "01030422228";
+  const seedPassword = process.env.SUPER_ADMIN_PASSWORD || "admin0115302197";
+  state.admins.push({
+    username: seedUsername,
+    password_hash: bcrypt.hashSync(seedPassword, 10),
+    created_at: new Date().toISOString(),
+  });
+  save();
+}
+
 function freeTutorSlotsUsed() {
   return state.providers.filter((x) => x.type === "tutor" && x.subscription_start).length;
 }
@@ -296,6 +308,23 @@ function requireAdmin(req, res, next) {
   if (req.headers["x-admin-key"] !== ADMIN_KEY) return res.status(401).json({ error: "غير مصرح" });
   next();
 }
+app.post("/api/admin/login", (req, res) => {
+  const { username, password } = req.body || {};
+  const admin = state.admins.find((a) => a.username === username);
+  if (!admin || !bcrypt.compareSync(password || "", admin.password_hash)) {
+    return res.status(401).json({ error: "بيانات الدخول غير صحيحة" });
+  }
+  res.json({ ok: true, username: admin.username, admin_key: ADMIN_KEY });
+});
+app.post("/api/admin/change-password", requireAdmin, (req, res) => {
+  const { username, new_password } = req.body || {};
+  const admin = state.admins.find((a) => a.username === username);
+  if (!admin) return res.status(404).json({ error: "الحساب غير موجود" });
+  if (!new_password || new_password.length < 6) return res.status(400).json({ error: "كلمة السر لازم تكون 6 حروف/أرقام على الأقل" });
+  admin.password_hash = bcrypt.hashSync(new_password, 10);
+  save();
+  res.json({ ok: true });
+});
 app.get("/api/admin/providers", requireAdmin, (req, res) => {
   const status = req.query.status || "pending";
   const rows = state.providers.filter((p) => p.status === status).sort((a, b) => b.id - a.id).map(stripPrivate);

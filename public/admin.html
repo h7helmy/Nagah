@@ -26,33 +26,48 @@
 <body>
 <div class="container">
   <h1><img src="/img/logo-icon.png" alt="نجاح" style="height:26px;width:26px;object-fit:contain;vertical-align:middle;border-radius:50%;margin-inline-end:4px;"> نجاح — لوحة إدارة المدرسين والمراكز</h1>
-  <p class="muted">أدخل مفتاح الإدارة (Admin Key) لعرض الطلبات</p>
-  <div class="card" id="stats-banner" style="display:none; text-align:center; font-weight:700;"></div>
-  <div class="card row">
-    <input id="key" type="password" placeholder="Admin Key" style="flex:1;">
-    <button class="btn approve" onclick="load()">دخول</button>
-  </div>
-  <div class="tabs">
-    <button data-mode="providers" class="active" onclick="setMode('providers')">المدرسون والمراكز</button>
-    <button data-mode="seekers" onclick="setMode('seekers')">أولياء الأمور والطلاب</button>
+
+  <div id="login-box">
+    <p class="muted">سجّل دخولك كسوبر أدمن</p>
+    <div class="card">
+      <div style="margin-bottom:8px;"><input id="admin-username" placeholder="رقم الهاتف / اسم المستخدم" style="width:100%;"></div>
+      <div style="margin-bottom:8px;"><input id="admin-password" type="password" placeholder="كلمة السر" style="width:100%;"></div>
+      <button class="btn approve" style="width:100%;" onclick="adminLogin()">دخول</button>
+      <div id="admin-login-error" style="color:#dc2626; font-size:13px; margin-top:8px; display:none;"></div>
+    </div>
   </div>
 
-  <div id="providers-section">
-    <div class="tabs">
-      <button data-status="pending" class="active" onclick="setTab('pending')">قيد المراجعة</button>
-      <button data-status="approved" onclick="setTab('approved')">المعتمدون</button>
-      <button data-status="rejected" onclick="setTab('rejected')">مرفوضون</button>
+  <div id="admin-content" style="display:none;">
+    <div class="row" style="margin-bottom:8px;">
+      <span class="muted" id="admin-whoami"></span>
+      <div style="display:flex; gap:6px;">
+        <button class="btn reset" onclick="changeAdminPassword()">تغيير كلمة السر</button>
+        <button class="btn delete" onclick="adminLogout()">تسجيل خروج</button>
+      </div>
     </div>
-    <div id="list"></div>
-  </div>
+    <div class="card" id="stats-banner" style="display:none; text-align:center; font-weight:700;"></div>
+    <div class="tabs">
+      <button data-mode="providers" class="active" onclick="setMode('providers')">المدرسون والمراكز</button>
+      <button data-mode="seekers" onclick="setMode('seekers')">أولياء الأمور والطلاب</button>
+    </div>
 
-  <div id="seekers-section" style="display:none;">
-    <div class="tabs">
-      <button data-stype="" class="active" onclick="setSeekerType('')">الكل</button>
-      <button data-stype="parent" onclick="setSeekerType('parent')">أولياء الأمور</button>
-      <button data-stype="student" onclick="setSeekerType('student')">الطلاب</button>
+    <div id="providers-section">
+      <div class="tabs">
+        <button data-status="pending" class="active" onclick="setTab('pending')">قيد المراجعة</button>
+        <button data-status="approved" onclick="setTab('approved')">المعتمدون</button>
+        <button data-status="rejected" onclick="setTab('rejected')">مرفوضون</button>
+      </div>
+      <div id="list"></div>
     </div>
-    <div id="seeker-list"></div>
+
+    <div id="seekers-section" style="display:none;">
+      <div class="tabs">
+        <button data-stype="" class="active" onclick="setSeekerType('')">الكل</button>
+        <button data-stype="parent" onclick="setSeekerType('parent')">أولياء الأمور</button>
+        <button data-stype="student" onclick="setSeekerType('student')">الطلاب</button>
+      </div>
+      <div id="seeker-list"></div>
+    </div>
   </div>
 </div>
 <script>
@@ -70,7 +85,7 @@ function setSeekerType(t){
   loadSeekers();
 }
 async function loadSeekers(){
-  const key = localStorage.getItem("nagah_admin_key") || document.getElementById("key").value;
+  const key = localStorage.getItem("nagah_admin_key");
   const res = await fetch("/api/admin/seekers?type="+currentSeekerType, { headers: { "x-admin-key": key } });
   const list = document.getElementById("seeker-list");
   if(!res.ok){ list.innerHTML = '<div class="empty">مفتاح غير صحيح أو حصل خطأ</div>'; return; }
@@ -92,20 +107,20 @@ async function loadSeekers(){
     </div>`).join("") : '<div class="empty">لا يوجد حسابات</div>';
 }
 async function seekerAct(id, action){
-  const key = localStorage.getItem("nagah_admin_key") || document.getElementById("key").value;
+  const key = localStorage.getItem("nagah_admin_key");
   await fetch(`/api/admin/seekers/${id}/${action}`, { method:"POST", headers: { "x-admin-key": key } });
   loadSeekers();
 }
 async function seekerResetPw(id){
   if(!confirm("هيتم توليد كلمة سر جديدة عشوائية لهذا الحساب. متأكد؟")) return;
-  const key = localStorage.getItem("nagah_admin_key") || document.getElementById("key").value;
+  const key = localStorage.getItem("nagah_admin_key");
   const res = await fetch(`/api/admin/seekers/${id}/reset-password`, { method:"POST", headers: { "x-admin-key": key } });
   const data = await res.json();
   if(data.new_password){ alert("كلمة السر الجديدة: "+data.new_password); } else { alert("حصل خطأ: "+(data.error||"غير معروف")); }
 }
 async function seekerDel(id){
   if(!confirm("متأكد إنك عايز تحذف هذا الحساب نهائيًا؟")) return;
-  const key = localStorage.getItem("nagah_admin_key") || document.getElementById("key").value;
+  const key = localStorage.getItem("nagah_admin_key");
   await fetch(`/api/admin/seekers/${id}`, { method:"DELETE", headers: { "x-admin-key": key } });
   loadSeekers();
 }
@@ -125,8 +140,7 @@ async function loadStats(key){
   banner.textContent = `🎁 باقي ${s.free_tutor_slots_left} من ${s.free_tutor_limit} اشتراك مجاني (سنة) للمدرسين`;
 }
 async function load(){
-  const key = document.getElementById("key").value;
-  localStorage.setItem("nagah_admin_key", key);
+  const key = localStorage.getItem("nagah_admin_key");
   loadStats(key);
   const res = await fetch("/api/admin/providers?status="+currentStatus, { headers: { "x-admin-key": key } });
   const list = document.getElementById("list");
@@ -157,7 +171,7 @@ async function load(){
     </div>`).join("") : '<div class="empty">لا يوجد أحد في هذه القائمة</div>';
 }
 async function act(id, action){
-  const key = localStorage.getItem("nagah_admin_key") || document.getElementById("key").value;
+  const key = localStorage.getItem("nagah_admin_key");
   const res = await fetch(`/api/admin/providers/${id}/${action}`, { method:"POST", headers: { "x-admin-key": key } });
   const data = await res.json().catch(()=>({}));
   if(action==="approve" && data.got_free_year===false){
@@ -167,13 +181,13 @@ async function act(id, action){
 }
 async function setSub(id){
   const months = document.getElementById("months-"+id).value;
-  const key = localStorage.getItem("nagah_admin_key") || document.getElementById("key").value;
+  const key = localStorage.getItem("nagah_admin_key");
   await fetch(`/api/admin/providers/${id}/set-subscription`, { method:"POST", headers: { "Content-Type":"application/json", "x-admin-key": key }, body: JSON.stringify({months}) });
   load();
 }
 async function resetPw(id){
   if(!confirm("هيتم توليد كلمة سر جديدة عشوائية لهذا الحساب. متأكد؟")) return;
-  const key = localStorage.getItem("nagah_admin_key") || document.getElementById("key").value;
+  const key = localStorage.getItem("nagah_admin_key");
   const res = await fetch(`/api/admin/providers/${id}/reset-password`, { method:"POST", headers: { "x-admin-key": key } });
   const data = await res.json();
   if(data.new_password){ alert("كلمة السر الجديدة: "+data.new_password+"\nابعتها للمدرس/المركز بنفسك (واتساب/إيميل)."); }
@@ -181,12 +195,49 @@ async function resetPw(id){
 }
 async function del(id){
   if(!confirm("متأكد إنك عايز تحذف ده نهائيًا؟ هيتحذف مع تقييماته وحجوزاته.")) return;
-  const key = localStorage.getItem("nagah_admin_key") || document.getElementById("key").value;
+  const key = localStorage.getItem("nagah_admin_key");
   await fetch(`/api/admin/providers/${id}`, { method:"DELETE", headers: { "x-admin-key": key } });
   load();
 }
-const saved = localStorage.getItem("nagah_admin_key");
-if(saved){ document.getElementById("key").value = saved; load(); }
+async function adminLogin(){
+  const username = document.getElementById("admin-username").value;
+  const password = document.getElementById("admin-password").value;
+  const errEl = document.getElementById("admin-login-error");
+  errEl.style.display = "none";
+  try{
+    const res = await fetch("/api/admin/login", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ username, password }) });
+    const data = await res.json();
+    if(!res.ok){ errEl.textContent = data.error || "بيانات الدخول غير صحيحة"; errEl.style.display = "block"; return; }
+    localStorage.setItem("nagah_admin_key", data.admin_key);
+    localStorage.setItem("nagah_admin_username", data.username);
+    enterAdmin();
+  }catch(e){ errEl.textContent = "حصل خطأ في الاتصال"; errEl.style.display = "block"; }
+}
+function adminLogout(){
+  localStorage.removeItem("nagah_admin_key");
+  localStorage.removeItem("nagah_admin_username");
+  document.getElementById("admin-content").style.display = "none";
+  document.getElementById("login-box").style.display = "block";
+  document.getElementById("admin-username").value = "";
+  document.getElementById("admin-password").value = "";
+}
+async function changeAdminPassword(){
+  const np = prompt("اكتب كلمة السر الجديدة (6 حروف/أرقام على الأقل):");
+  if(!np) return;
+  const key = localStorage.getItem("nagah_admin_key");
+  const username = localStorage.getItem("nagah_admin_username");
+  const res = await fetch("/api/admin/change-password", { method:"POST", headers:{"Content-Type":"application/json", "x-admin-key": key}, body: JSON.stringify({ username, new_password: np }) });
+  const data = await res.json().catch(()=>({}));
+  if(res.ok) alert("تم تغيير كلمة السر بنجاح"); else alert("حصل خطأ: "+(data.error||"غير معروف"));
+}
+function enterAdmin(){
+  document.getElementById("login-box").style.display = "none";
+  document.getElementById("admin-content").style.display = "block";
+  document.getElementById("admin-whoami").textContent = "مسجل دخول: "+(localStorage.getItem("nagah_admin_username")||"");
+  load();
+}
+const savedKey = localStorage.getItem("nagah_admin_key");
+if(savedKey){ enterAdmin(); }
 </script>
 </body>
 </html>

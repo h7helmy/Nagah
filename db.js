@@ -14,6 +14,7 @@ function seedData() {
     reviews: [],   // { id, provider_id, name, rating, text, created_at }
     bookings: [],  // { id, provider_id, seeker_id, status, created_at }
     favorites: [], // { seeker_id, provider_id }
+    admins: [],    // { username, password_hash } - حسابات السوبر أدمن
   };
 }
 
@@ -25,6 +26,8 @@ if (fs.existsSync(DATA_PATH)) {
     if (!Array.isArray(state.providers) || !Array.isArray(state.seekers)) {
       state = seedData();
     }
+    // ترقية آمنة: لو الملف قديم ومفيهوش مصفوفة admins، نضيفها من غير ما نمسح أي بيانات موجودة
+    if (!Array.isArray(state.admins)) state.admins = [];
   } catch (e) {
     state = seedData();
   }
