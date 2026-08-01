@@ -78,6 +78,15 @@ app.post("/api/providers", (req, res) => {
   if (!name || !phone || !email || !country || !nationality || !dob || !subject || !price) {
     return res.status(400).json({ error: "البيانات الأساسية (الاسم، الهاتف، الإيميل، الدولة، الجنسية، تاريخ الميلاد، التخصص، السعر) مطلوبة" });
   }
+  if (state.providers.some((p) => p.phone === phone)) {
+    return res.status(409).json({ error: "رقم الهاتف ده مسجل بالفعل" });
+  }
+  if (state.providers.some((p) => p.email.toLowerCase() === String(email).toLowerCase())) {
+    return res.status(409).json({ error: "البريد الإلكتروني ده مسجل بالفعل" });
+  }
+  if (username && state.providers.some((p) => p.username && p.username.toLowerCase() === String(username).toLowerCase())) {
+    return res.status(409).json({ error: "اسم المستخدم ده مستخدم بالفعل" });
+  }
   if (!["online", "in_person", "both"].includes(mode)) {
     return res.status(400).json({ error: "طريقة التدريس لازم تكون أونلاين أو حضوري أو الاثنين" });
   }
@@ -129,6 +138,15 @@ app.post("/api/seekers", (req, res) => {
   }
   if (!name || !phone || !country || !nationality || !dob) {
     return res.status(400).json({ error: "الاسم والهاتف والدولة والجنسية وتاريخ الميلاد مطلوبة" });
+  }
+  if (state.seekers.some((s) => s.phone === phone)) {
+    return res.status(409).json({ error: "رقم الهاتف ده مسجل بالفعل" });
+  }
+  if (email && state.seekers.some((s) => s.email && s.email.toLowerCase() === String(email).toLowerCase())) {
+    return res.status(409).json({ error: "البريد الإلكتروني ده مسجل بالفعل" });
+  }
+  if (username && state.seekers.some((s) => s.username && s.username.toLowerCase() === String(username).toLowerCase())) {
+    return res.status(409).json({ error: "اسم المستخدم ده مستخدم بالفعل" });
   }
   const s = {
     id: state.nextIds.seeker++, type, name, username: username || "", phone,
