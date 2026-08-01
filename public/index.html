@@ -4,22 +4,24 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>نجاح | منصة المدرسين الخصوصيين</title>
+<link rel="icon" type="image/png" href="/img/logo-icon.png">
 <style>
   :root{
-    --primary:#2563eb; --primary-dark:#1d4ed8; --accent:#f59e0b;
-    --bg:#f7f8fb; --card:#ffffff; --text:#1f2430; --muted:#6b7280;
+    --primary:#1e5a78; --primary-dark:#0f2d4b; --accent:#d2772d;
+    --bg:#f7f5f0; --card:#ffffff; --text:#1a2733; --muted:#6b7280;
     --border:#e5e7eb; --success:#16a34a; --radius:14px;
   }
   *{box-sizing:border-box; margin:0; padding:0;}
   body{font-family:'Segoe UI', Tahoma, Arial, sans-serif; background:var(--bg); color:var(--text); padding-bottom:70px;}
   header.top{background:linear-gradient(135deg,var(--primary),var(--primary-dark)); color:#fff; padding:18px 16px 60px;}
   header.top h1{font-size:22px; display:flex; align-items:center; gap:8px;}
+  header.top h1 img{height:36px; width:36px; object-fit:contain; background:#fff; border-radius:50%; padding:3px;}
   header.top p{font-size:13px; opacity:.9; margin-top:4px;}
   .container{max-width:960px; margin:0 auto; padding:0 14px;}
   .search-card{background:var(--card); border-radius:var(--radius); box-shadow:0 8px 24px rgba(0,0,0,.12); margin-top:-42px; padding:16px; position:relative; z-index:5;}
   .search-big{width:100%; padding:14px 16px; border:1px solid var(--border); border-radius:12px; font-size:15px; background:#fafafa; color:var(--text);}
   .chips{display:flex; gap:6px; flex-wrap:wrap; margin-top:10px;}
-  .chip{background:#eef2ff; color:var(--primary); border:none; padding:6px 12px; border-radius:20px; font-size:12px; cursor:pointer;}
+  .chip{background:#e7f0f4; color:var(--primary); border:none; padding:6px 12px; border-radius:20px; font-size:12px; cursor:pointer;}
   .day-chip{background:#f3f4f6; color:var(--muted); border:1px solid var(--border); padding:6px 10px; border-radius:20px; font-size:12px; cursor:pointer;}
   .day-chip.active{background:var(--primary); color:#fff; border-color:var(--primary);}
   .filters{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px;}
@@ -39,7 +41,7 @@
   .card-top{display:flex; gap:10px; align-items:center;}
   .avatar{width:52px; height:52px; border-radius:50%; background:var(--primary); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:18px; flex-shrink:0;}
   .name{font-weight:700; font-size:15px;}
-  .tag{display:inline-block; background:#eef2ff; color:var(--primary); font-size:11px; padding:2px 8px; border-radius:20px; margin-top:4px;}
+  .tag{display:inline-block; background:#e7f0f4; color:var(--primary); font-size:11px; padding:2px 8px; border-radius:20px; margin-top:4px;}
   .tag-center{background:#fdf4ff; color:#a21caf;}
   .top-badge{display:inline-flex; align-items:center; gap:3px; background:#fffbeb; color:#92400e; font-size:11px; padding:2px 8px; border-radius:20px; margin-inline-start:4px; font-weight:700;}
   .stars{color:var(--accent); font-size:13px; margin-top:6px;}
@@ -76,7 +78,7 @@
   .center-title h2{font-size:18px;} .center-title p{font-size:13px; color:var(--muted); margin-top:4px;}
   .role-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px;}
   .role-card{background:var(--card); border:2px solid var(--border); border-radius:var(--radius); padding:16px 10px; text-align:center; cursor:pointer;}
-  .role-card.active{border-color:var(--primary); background:#eef2ff;}
+  .role-card.active{border-color:var(--primary); background:#e7f0f4;}
   .role-card .ic{font-size:26px;}
   .role-card .lbl{font-size:13px; font-weight:700; margin-top:6px;}
 </style>
@@ -85,7 +87,7 @@
 
 <header class="top">
   <div class="container">
-    <h1>🎓 نجاح</h1>
+    <h1><img src="/img/logo-icon.png" alt="نجاح"> نجاح</h1>
     <p>منصة عربية لربط المعلمات والمعلمين والمراكز التعليمية بأولياء الأمور والطلاب</p>
   </div>
 </header>
@@ -465,7 +467,7 @@ async function openProfile(id){
       </div>
       <p class="price" style="margin-top:10px;">${p.price} / الحصة</p>
       ${(p.availability_days && p.availability_days.length) ? `
-      <div class="contact-box" style="background:#eff6ff; border-color:var(--primary);">
+      <div class="contact-box" style="background:#e7f0f4; border-color:var(--primary);">
         <strong>🕒 الوقت المتاح للتواصل والحجز</strong>
         <div class="muted" style="margin-top:6px;">الأيام: ${p.availability_days.join("، ")}</div>
         ${(p.availability_from && p.availability_to) ? `<div class="muted" style="margin-top:2px;">من ${p.availability_from} لحد ${p.availability_to}</div>` : ""}
