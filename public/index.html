@@ -148,7 +148,7 @@
       </div>
       <div class="field-row">
         <div class="field"><label>المدينة/المنطقة</label><input id="pr-area"></div>
-        <div class="field"><label>التخصص/المادة</label><input required id="pr-subject" placeholder="مثال: رياضيات"></div>
+        <div class="field"><label>التخصص/المادة</label><input required id="pr-subject" list="subject-datalist" placeholder="مثال: رياضيات"></div>
       </div>
       <div class="field-row">
         <div class="field"><label id="pr-degree-label">الدرجة العلمية</label><input id="pr-degree"></div>
@@ -224,6 +224,7 @@
   </div>
 </div>
 
+<datalist id="subject-datalist"></datalist>
 <div class="modal-overlay" id="modal-overlay"><div class="modal" id="modal-content"></div></div>
 <div class="toast" id="toast"></div>
 
@@ -341,8 +342,14 @@ async function renderGrid(){
   }catch(e){ showToast(e.message); }
 }
 
-const subjectsChips = ["رياضيات","لغة إنجليزية","فيزياء","كيمياء","لغة عربية"];
-document.getElementById("chips").innerHTML = subjectsChips.map(s=>`<button class="chip" onclick="document.getElementById('q').value='${s}'; renderGrid();">${s}</button>`).join("");
+const subjectsChips = [
+  "الكل","رياضيات","لغة إنجليزية","لغة عربية","لغة فرنسية","لغة ألمانية",
+  "فيزياء","كيمياء","أحياء","علوم","جغرافيا","تاريخ","فلسفة ومنطق",
+  "علم نفس واجتماع","دراسات اجتماعية","تربية دينية","قرآن كريم وتجويد",
+  "حاسب آلي وبرمجة","اقتصاد وإحصاء","IELTS / TOEFL","SAT / ACT",
+];
+document.getElementById("chips").innerHTML = subjectsChips.map(s=>`<button class="chip" onclick="document.getElementById('q').value='${s==='الكل'?'':s}'; renderGrid();">${s}</button>`).join("");
+document.getElementById("subject-datalist").innerHTML = subjectsChips.filter(s=>s!=="الكل").map(s=>`<option value="${s}">`).join("");
 
 async function openProfile(id){
   try{
