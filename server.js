@@ -107,10 +107,16 @@ app.get("/api/providers/:id", (req, res) => {
     .map(({ seeker_name, rating, text, created_at }) => ({ seeker_name, rating, text, created_at }));
 
   let phone = null;
+  let can_review = false;
   const seekerId = parseInt(req.query.seeker_id, 10);
-  if (seekerId && state.seekers.some((s) => s.id === seekerId)) phone = p.phone;
+  if (seekerId && state.seekers.some((s) => s.id === seekerId)) {
+    phone = p.phone;
+    const hasConfirmedBooking = state.bookings.some((b) => b.provider_id === id && b.seeker_id === seekerId && b.status === "confirmed");
+    const alreadyReviewed = state.reviews.some((r) => r.provider_id === id && r.seeker_id === seekerId);
+    can_review = hasConfirmedBooking && !alreadyReviewed;
+  }
 
-  res.json({ ...full, phone, reviews });
+  res.json({ ...full, phone, can_review, reviews });
 });
 
 // ---------- provider registration (tutor أو center) - pending review ----------
@@ -182,22 +188,30 @@ app.get("/api/providers/:id/bookings", (req, res) => {
     .sort((a, b) => b.id - a.id)
     .map((b) => {
       const s = state.seekers.find((x) => x.id === b.seeker_id) || {};
-      return { id: b.id, status: b.status, created_at: b.created_at, seeker_name: s.name, seeker_phone: s.phone };
+      return { id: b.id, status: b.status, status_label: bookingStatusLabel(b.status), created_at: b.created_at, seeker_name: s.name, seeker_phone: s.phone };
     });
   res.json(rows);
 });
 
-// ---------- reviews ----------
+// ---------- reviews (مقفولة على حجز مؤكد فقط عشان تكون التقييمات موثوقة) ----------
 app.post("/api/providers/:id/reviews", (req, res) => {
   const id = parseInt(req.params.id, 10);
   const p = state.providers.find((x) => x.id === id);
   if (!p) return res.status(404).json({ error: "غير موجود" });
-  const { seeker_name, rating, text } = req.body || {};
+  const { seeker_id, rating, text } = req.body || {};
+  const seekerId = parseInt(seeker_id, 10);
+  const seeker = state.seekers.find((s) => s.id === seekerId);
+  if (!seeker) return res.status(401).json({ error: "لازم تسجّل دخولك كولي أمر أو طالب الأول عشان تقيّم" });
+  const hasConfirmedBooking = state.bookings.some((b) => b.provider_id === id && b.seeker_id === seekerId && b.status === "confirmed");
+  if (!hasConfirmedBooking) return res.status(403).json({ error: "التقييم متاح بس بعد ما المدرس يأكد حجزك معاه" });
+  if (state.reviews.some((r) => r.provider_id === id && r.seeker_id === seekerId)) {
+    return res.status(409).json({ error: "أنت قيّمت المدرس ده قبل كده" });
+  }
   const r = parseInt(rating, 10);
   if (!r || r < 1 || r > 5) return res.status(400).json({ error: "التقييم لازم يكون من 1 لـ 5" });
   state.reviews.push({
-    id: state.nextIds.review++, provider_id: id,
-    seeker_name: seeker_name || "ولي أمر", rating: r, text: text || "(بدون تعليق)",
+    id: state.nextIds.review++, provider_id: id, seeker_id: seekerId,
+    seeker_name: seeker.name, rating: r, text: text || "(بدون تعليق)",
     created_at: new Date().toISOString(),
   });
   save();
@@ -286,10 +300,32 @@ app.post("/api/bookings", (req, res) => {
   const provider = state.providers.find((p) => p.id === provider_id && p.status === "approved");
   const seeker = state.seekers.find((s) => s.id === seeker_id);
   if (!provider || !seeker) return res.status(400).json({ error: "بيانات الحجز غير صحيحة" });
-  const b = { id: state.nextIds.booking++, provider_id, seeker_id, status: "بانتظار تأكيد المدرس", created_at: new Date().toISOString() };
+  const b = { id: state.nextIds.booking++, provider_id, seeker_id, status: "pending", created_at: new Date().toISOString() };
   state.bookings.push(b);
   save();
   res.status(201).json({ id: b.id });
+});
+function bookingStatusLabel(status) {
+  return status === "confirmed" ? "✅ تم تأكيد الحجز" : status === "cancelled" ? "❌ ملغي" : "⏳ بانتظار تأكيد المدرس";
+}
+// المدرس/المركز بيأكد أو يلغي طلب الحجز - التأكيد هو اللي بيفتح الباب لولي الأمر/الطالب عشان يقيّم بعد كده
+app.post("/api/bookings/:id/confirm", (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const providerId = parseInt(req.body.provider_id, 10);
+  const b = state.bookings.find((x) => x.id === id && x.provider_id === providerId);
+  if (!b) return res.status(404).json({ error: "غير موجود" });
+  b.status = "confirmed";
+  save();
+  res.json({ ok: true });
+});
+app.post("/api/bookings/:id/cancel", (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const providerId = parseInt(req.body.provider_id, 10);
+  const b = state.bookings.find((x) => x.id === id && x.provider_id === providerId);
+  if (!b) return res.status(404).json({ error: "غير موجود" });
+  b.status = "cancelled";
+  save();
+  res.json({ ok: true });
 });
 app.get("/api/seekers/:sid/bookings", (req, res) => {
   const seeker_id = parseInt(req.params.sid, 10);
@@ -298,7 +334,7 @@ app.get("/api/seekers/:sid/bookings", (req, res) => {
     .sort((a, b) => b.id - a.id)
     .map((b) => {
       const p = state.providers.find((x) => x.id === b.provider_id) || {};
-      return { id: b.id, status: b.status, created_at: b.created_at, provider_name: p.name, subject: p.subject, price: p.price };
+      return { id: b.id, status: b.status, status_label: bookingStatusLabel(b.status), created_at: b.created_at, provider_name: p.name, subject: p.subject, price: p.price };
     });
   res.json(rows);
 });

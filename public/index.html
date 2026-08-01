@@ -477,7 +477,9 @@ async function openProfile(id){
       <div class="section"><h2 style="font-size:15px;">التقييمات</h2>${reviewsHtml}</div>
       <div class="section">
         <h2 style="font-size:15px;">قيّم بلمسة واحدة</h2>
-        <div class="stars-input" id="star-input">${[1,2,3,4,5].map(n=>`<span data-n="${n}" onclick="rateNow(${p.id},${n})">★</span>`).join("")}</div>
+        ${p.can_review
+          ? `<div class="stars-input" id="star-input">${[1,2,3,4,5].map(n=>`<span data-n="${n}" onclick="rateNow(${p.id},${n})">★</span>`).join("")}</div>`
+          : `<p class="muted" style="padding:6px 0;">${!currentUser ? "سجّل دخولك كولي أمر أو طالب لتقييم المدرس" : "التقييم بيتفتح بعد ما المدرس يأكد حجزك معاه (أو لو قيّمته قبل كده)"}</p>`}
       </div>`;
     document.getElementById("modal-overlay").classList.add("open");
   }catch(e){ showToast(e.message); }
@@ -486,9 +488,10 @@ function closeModal(){ document.getElementById("modal-overlay").classList.remove
 document.getElementById("modal-overlay").addEventListener("click", e=>{ if(e.target.id==="modal-overlay") closeModal(); });
 
 async function rateNow(pid, n){
+  if(!currentUser){ showToast("سجّل دخولك كولي أمر أو طالب الأول"); return; }
   try{
     await api("/api/providers/"+pid+"/reviews", { method:"POST", body: JSON.stringify({
-      seeker_name: currentUser ? currentUser.name : "زائر", rating:n, text:"(تقييم سريع)"
+      seeker_id: currentUser.id, rating:n, text:"(تقييم سريع)"
     })});
     showToast("تم إرسال تقييمك، شكرًا لك! ⭐");
     openProfile(pid);
@@ -572,6 +575,13 @@ function providerLogout(){
   localStorage.removeItem("nagah_provider");
   renderAccountView();
 }
+async function bookingAction(bookingId, action){
+  try{
+    await api("/api/bookings/"+bookingId+"/"+action, { method:"POST", body: JSON.stringify({ provider_id: providerUser.id }) });
+    showToast(action==="confirm" ? "تم تأكيد الحجز ✅" : "تم إلغاء الحجز");
+    renderAccountView();
+  }catch(e){ showToast(e.message); }
+}
 
 // صفحة "حسابي" الموحدة: بتعرض تسجيل الدخول، أو لوحة المدرس/المركز، أو لوحة ولي الأمر/الطالب حسب مين الداخل
 async function renderAccountView(){
@@ -598,8 +608,14 @@ async function renderAccountView(){
         <div class="card" style="cursor:default;">
           <div style="display:flex; justify-content:space-between; align-items:center;">
             <div><div class="name">${b.seeker_name||"غير معروف"}</div><span class="muted">📞 ${b.seeker_phone||""}</span></div>
-            <span class="pill">${b.status}</span>
+            <span class="pill">${b.status_label}</span>
           </div>
+          ${b.status==="pending" ? `
+          <div style="display:flex; gap:6px; margin-top:8px;">
+            <button class="btn btn-primary" style="flex:1; padding:8px;" onclick="bookingAction(${b.id},'confirm')">✅ تأكيد الحجز</button>
+            <button class="btn btn-outline" style="flex:1; padding:8px;" onclick="bookingAction(${b.id},'cancel')">إلغاء</button>
+          </div>
+          <div class="muted" style="margin-top:6px; font-size:11.5px;">التقييم من ولي الأمر/الطالب هيتفتح بس بعد ما تأكد الحجز</div>` : ""}
         </div>`).join("") : '<div class="empty">لا توجد طلبات تواصل بعد</div>';
     }catch(e){ showToast(e.message); }
     return;
@@ -623,7 +639,7 @@ async function renderAccountView(){
         <div class="card" style="cursor:default;">
           <div style="display:flex; justify-content:space-between; align-items:center;">
             <div><div class="name">${b.provider_name}</div><span class="muted">${b.subject} — ${b.price}</span></div>
-            <span class="pill">${b.status}</span>
+            <span class="pill">${b.status_label}</span>
           </div>
           <div class="free-banner" style="margin-top:8px;">بدون عمولة على هذا الحجز (عرض السنة الأولى)</div>
         </div>`).join("") : '<div class="empty">لا توجد طلبات حجز بعد</div>';
