@@ -97,6 +97,7 @@
       <input class="search-big" id="q" placeholder="🔎 اكتب المادة أو الاسم أو المنطقة...">
       <div class="chips" id="chips"></div>
       <div class="filters">
+        <select id="f-stage" onchange="renderGrid()"><option value="">كل المراحل الدراسية</option></select>
         <select id="f-country" onchange="onCountryChange('f-country','f-area'); renderGrid()"><option value="">كل الدول</option></select>
         <select id="f-area" onchange="renderGrid()"><option value="">كل المحافظات</option></select>
         <select id="f-mode" onchange="renderGrid()">
@@ -149,8 +150,10 @@
       </div>
       <div class="field-row">
         <div class="field"><label>المحافظة</label><select id="pr-area"><option value="">اختر الدولة أولًا</option></select></div>
-        <div class="field"><label>التخصص/المادة</label><input required id="pr-subject" list="subject-datalist" placeholder="مثال: رياضيات"></div>
+        <div class="field"><label>المرحلة الدراسية</label><select required id="pr-stage" onchange="onStageChange('pr-stage','pr-subject-list')"></select></div>
       </div>
+      <div class="field"><label>التخصص/المادة</label><input required id="pr-subject" list="pr-subject-list" placeholder="اختر المرحلة الأول"></div>
+      <datalist id="pr-subject-list"></datalist>
       <div class="field-row">
         <div class="field"><label id="pr-degree-label">الدرجة العلمية</label><input id="pr-degree"></div>
         <div class="field"><label>سنوات الخبرة</label><input type="number" id="pr-exp" min="0"></div>
@@ -225,7 +228,6 @@
   </div>
 </div>
 
-<datalist id="subject-datalist"></datalist>
 <div class="modal-overlay" id="modal-overlay"><div class="modal" id="modal-content"></div></div>
 <div class="toast" id="toast"></div>
 
@@ -264,6 +266,21 @@ const AR_GOVERNORATES = {
 };
 function govOptionsFor(country){
   return (AR_GOVERNORATES[country] || []).map(g=>`<option value="${g}">${g}</option>`).join("");
+}
+
+const STAGES = ["رياض أطفال","ابتدائي","إعدادي","ثانوي","جامعي","دراسات عليا","لغات ودورات عامة","تعليم كبار"];
+const STAGE_SUBJECTS = {
+  "رياض أطفال": ["مهارات ما قبل القراءة","أرقام وحروف","أنشطة حركية وذهنية","لغة إنجليزية تمهيدي"],
+  "ابتدائي": ["لغة عربية","لغة إنجليزية","رياضيات","علوم","دراسات اجتماعية","تربية دينية","حاسب آلي"],
+  "إعدادي": ["لغة عربية","لغة إنجليزية","لغة فرنسية","لغة ألمانية","رياضيات","علوم","دراسات اجتماعية","تربية دينية","حاسب آلي"],
+  "ثانوي": ["لغة عربية","لغة إنجليزية","لغة فرنسية","لغة ألمانية","رياضيات","فيزياء","كيمياء","أحياء","جيولوجيا","تاريخ","جغرافيا","فلسفة ومنطق","علم نفس واجتماع","اقتصاد وإحصاء"],
+  "جامعي": ["برمجة وحاسبات","هندسة","طب وعلوم صحية","تجارة واقتصاد","قانون","لغات وترجمة","إدارة أعمال","تصميم وعمارة"],
+  "دراسات عليا": ["منهجية بحث","إحصاء تطبيقي","إدارة أعمال (ماجستير)","تخصصات أكاديمية متقدمة"],
+  "لغات ودورات عامة": ["IELTS / TOEFL","SAT / ACT","محادثة لغة إنجليزية","لغات أجنبية عامة"],
+  "تعليم كبار": ["قراءة وكتابة","حساب أساسي","محو أمية"],
+};
+function subjectsForStage(stage){
+  return STAGE_SUBJECTS[stage] || Object.values(STAGE_SUBJECTS).flat();
 }
 const WEEK_DAYS = ["السبت","الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة"];
 let selectedDays = [];
@@ -340,6 +357,7 @@ document.getElementById("q").addEventListener("input", debouncedRender);
 
 async function renderGrid(){
   const q = document.getElementById("q").value.trim();
+  const stage = document.getElementById("f-stage").value;
   const country = document.getElementById("f-country").value;
   const area = document.getElementById("f-area").value.trim();
   const mode = document.getElementById("f-mode").value;
@@ -347,6 +365,7 @@ async function renderGrid(){
   const params = new URLSearchParams();
   if(q) params.set("q", q + (area ? " "+area : ""));
   else if(area) params.set("q", area);
+  if(stage) params.set("stage", stage);
   if(country) params.set("country", country);
   if(mode) params.set("mode", mode);
   if(groupType) params.set("group_type", groupType);
@@ -364,6 +383,7 @@ async function renderGrid(){
             <div class="name">${p.name} ${i<3 && p.rating>0 ? '<span class="top-badge">🏆 الأعلى تقييمًا</span>':''}</div>
             <span class="tag ${p.type==='center'?'tag-center':''}">${p.type==='center' ? '🏫 مركز تعليمي' : '🧑‍🏫 مدرس'}</span>
             <span class="tag">${p.subject}</span>
+            ${p.stage ? `<span class="tag">${p.stage}</span>` : ""}
           </div>
         </div>
         <div class="stars">${starString(p.rating)}</div>
@@ -377,14 +397,20 @@ async function renderGrid(){
   }catch(e){ showToast(e.message); }
 }
 
-const subjectsChips = [
-  "الكل","رياضيات","لغة إنجليزية","لغة عربية","لغة فرنسية","لغة ألمانية",
-  "فيزياء","كيمياء","أحياء","علوم","جغرافيا","تاريخ","فلسفة ومنطق",
-  "علم نفس واجتماع","دراسات اجتماعية","تربية دينية","قرآن كريم وتجويد",
-  "حاسب آلي وبرمجة","اقتصاد وإحصاء","IELTS / TOEFL","SAT / ACT",
-];
-document.getElementById("chips").innerHTML = subjectsChips.map(s=>`<button class="chip" onclick="document.getElementById('q').value='${s==='الكل'?'':s}'; renderGrid();">${s}</button>`).join("");
-document.getElementById("subject-datalist").innerHTML = subjectsChips.filter(s=>s!=="الكل").map(s=>`<option value="${s}">`).join("");
+document.getElementById("f-stage").innerHTML = `<option value="">كل المراحل الدراسية</option>` + STAGES.map(s=>`<option value="${s}">${s}</option>`).join("");
+document.getElementById("f-stage").addEventListener("change", ()=>{ renderSubjectChips(document.getElementById("f-stage").value); renderGrid(); });
+function renderSubjectChips(stage){
+  const list = ["الكل", ...subjectsForStage(stage)];
+  document.getElementById("chips").innerHTML = list.map(s=>`<button class="chip" onclick="document.getElementById('q').value='${s==='الكل'?'':s}'; renderGrid();">${s}</button>`).join("");
+}
+renderSubjectChips("");
+["pr-stage"].forEach(id=>{
+  document.getElementById(id).innerHTML = `<option value="">اختر المرحلة</option>` + STAGES.map(s=>`<option value="${s}">${s}</option>`).join("");
+});
+function onStageChange(stageSelectId, datalistId){
+  const stage = document.getElementById(stageSelectId).value;
+  document.getElementById(datalistId).innerHTML = subjectsForStage(stage).map(s=>`<option value="${s}">`).join("");
+}
 
 async function openProfile(id){
   try{
@@ -403,6 +429,7 @@ async function openProfile(id){
         <div><div class="name" style="font-size:17px;">${p.name}</div>
         <span class="tag ${p.type==='center'?'tag-center':''}">${p.type==='center' ? '🏫 مركز تعليمي' : '🧑‍🏫 مدرس'}</span>
         <span class="tag">${p.subject}</span>
+        ${p.stage ? `<span class="tag">${p.stage}</span>` : ""}
         <span class="badge-region">📍 ${p.country}${p.area ? " - "+p.area : ""}</span></div>
       </div>
       <div class="stars" style="margin-top:10px;">${starString(p.rating)} — ${p.reviewCount} تقييم</div>
@@ -468,7 +495,7 @@ document.getElementById("provider-form").addEventListener("submit", async e=>{
       type,
       name: v("pr-name"), username: v("pr-username"), phone: v("pr-phone"), email: v("pr-email"),
       nationality: v("pr-nat"), dob: v("pr-dob"), country: v("pr-country"), area: v("pr-area"),
-      subject: v("pr-subject"), degree: v("pr-degree"), experience_years: v("pr-exp"),
+      stage: v("pr-stage"), subject: v("pr-subject"), degree: v("pr-degree"), experience_years: v("pr-exp"),
       mode: v("pr-mode"), group_type: v("pr-group"), max_students: v("pr-maxstudents"),
       price: v("pr-price"), payment_method: v("pr-payment"), bio: v("pr-bio"),
       availability_days: selectedDays, availability_from: v("pr-from"), availability_to: v("pr-to"),

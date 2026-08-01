@@ -53,16 +53,18 @@ app.get("/api/providers", (req, res) => {
   const mode = (req.query.mode || "").trim(); // online | in_person | both
   const groupType = (req.query.group_type || "").trim(); // individual | group
   const type = (req.query.type || "").trim(); // tutor | center
+  const stage = (req.query.stage || "").trim();
 
   let rows = state.providers.filter((p) => p.status === "approved" && isLive(p)).map(withRating);
 
   if (q) {
     const words = q.split(/\s+/).filter(Boolean);
     rows = rows.filter((p) => {
-      const hay = `${p.name} ${p.subject} ${p.country} ${p.area}`.toLowerCase();
+      const hay = `${p.name} ${p.subject} ${p.stage} ${p.country} ${p.area}`.toLowerCase();
       return words.every((w) => hay.includes(w));
     });
   }
+  if (stage) rows = rows.filter((p) => p.stage === stage);
   if (country) rows = rows.filter((p) => p.country === country);
   if (mode) rows = rows.filter((p) => p.mode === mode || p.mode === "both");
   if (groupType) rows = rows.filter((p) => p.group_type === groupType);
@@ -94,7 +96,7 @@ app.get("/api/providers/:id", (req, res) => {
 app.post("/api/providers", (req, res) => {
   const {
     type, name, username, phone, email, country, area, nationality, dob,
-    subject, degree, experience_years, mode, group_type, max_students,
+    stage, subject, degree, experience_years, mode, group_type, max_students,
     price, payment_method, bio, availability_days, availability_from, availability_to,
     password,
   } = req.body || {};
@@ -131,7 +133,7 @@ app.post("/api/providers", (req, res) => {
     id: state.nextIds.provider++,
     type, name, username: username || "", phone, email,
     country, area: area || "", nationality, dob,
-    subject, degree: degree || "", experience_years: parseInt(experience_years, 10) || 0,
+    stage: stage || "", subject, degree: degree || "", experience_years: parseInt(experience_years, 10) || 0,
     mode, group_type, max_students: group_type === "group" ? (parseInt(max_students, 10) || 2) : 1,
     price: parseFloat(price) || 0, payment_method, bio: bio || "",
     availability_days: Array.isArray(availability_days) ? availability_days : [],
