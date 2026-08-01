@@ -348,6 +348,10 @@ function onCountryChange(countrySelectId, areaSelectId){
 
 document.querySelectorAll("nav.bottom button").forEach(btn=>{
   btn.addEventListener("click",()=>{
+    if(btn.dataset.view==="view-dashboard"){
+      if(providerUser){ document.querySelector('[data-view="view-provider"]').click(); return; }
+      if(!currentUser){ showToast("سجّل دخولك الأول عشان تشوف لوحتك"); document.querySelector('[data-view="view-provider"]').click(); return; }
+    }
     document.querySelectorAll("nav.bottom button").forEach(b=>b.classList.remove("active"));
     document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));
     btn.classList.add("active");
