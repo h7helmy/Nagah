@@ -10,6 +10,11 @@ app.use(express.static(path.join(__dirname, "public")));
 
 const ADMIN_KEY = process.env.ADMIN_KEY || "admin123";
 const FREE_SUBSCRIPTION_DAYS = 365;
+const FREE_TUTOR_LIMIT = 100; // أول 100 معلم/معلمة بياخدوا سنة مجانية أوتوماتيك
+
+function freeTutorSlotsUsed() {
+  return state.providers.filter((x) => x.type === "tutor" && x.subscription_start).length;
+}
 
 function subscriptionInfo(p) {
   const now = Date.now();
@@ -256,14 +261,39 @@ app.post("/api/admin/providers/:id/approve", requireAdmin, (req, res) => {
   const p = state.providers.find((x) => x.id === id);
   if (p) {
     p.status = "approved";
+    let gotFreeYear = false;
     if (!p.subscription_start) {
-      p.subscription_start = new Date().toISOString();
-      p.subscription_end = new Date(Date.now() + FREE_SUBSCRIPTION_DAYS * 86400000).toISOString();
+      if (p.type === "center" || (p.type === "tutor" && freeTutorSlotsUsed() < FREE_TUTOR_LIMIT)) {
+        p.subscription_start = new Date().toISOString();
+        p.subscription_end = new Date(Date.now() + FREE_SUBSCRIPTION_DAYS * 86400000).toISOString();
+        gotFreeYear = true;
+      }
     }
     p.active = true;
     save();
+    return res.json({ ok: true, got_free_year: gotFreeYear });
   }
   res.json({ ok: true });
+});
+app.post("/api/admin/providers/:id/set-subscription", requireAdmin, (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const p = state.providers.find((x) => x.id === id);
+  if (!p) return res.status(404).json({ error: "غير موجود" });
+  const months = parseInt(req.body.months, 10);
+  if (!months || months < 1) return res.status(400).json({ error: "عدد الشهور غير صحيح" });
+  p.subscription_start = new Date().toISOString();
+  p.subscription_end = new Date(Date.now() + months * 30 * 86400000).toISOString();
+  p.active = true;
+  save();
+  res.json({ ok: true, subscription_end: p.subscription_end });
+});
+app.get("/api/admin/stats", requireAdmin, (req, res) => {
+  const used = freeTutorSlotsUsed();
+  res.json({
+    free_tutor_limit: FREE_TUTOR_LIMIT,
+    free_tutor_slots_used: used,
+    free_tutor_slots_left: Math.max(0, FREE_TUTOR_LIMIT - used),
+  });
 });
 app.post("/api/admin/providers/:id/suspend", requireAdmin, (req, res) => {
   const id = parseInt(req.params.id, 10);

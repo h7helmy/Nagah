@@ -26,6 +26,7 @@
 <div class="container">
   <h1>🎓 نجاح — لوحة إدارة المدرسين والمراكز</h1>
   <p class="muted">أدخل مفتاح الإدارة (Admin Key) لعرض الطلبات</p>
+  <div class="card" id="stats-banner" style="display:none; text-align:center; font-weight:700;"></div>
   <div class="card row">
     <input id="key" type="password" placeholder="Admin Key" style="flex:1;">
     <button class="btn approve" onclick="load()">دخول</button>
@@ -45,9 +46,19 @@ function setTab(s){
   load();
 }
 function modeLabel(m){ return m==="online" ? "أونلاين" : m==="in_person" ? "حضوري" : "أونلاين وحضوري"; }
+async function loadStats(key){
+  const res = await fetch("/api/admin/stats", { headers: { "x-admin-key": key } });
+  const banner = document.getElementById("stats-banner");
+  if(!res.ok){ banner.style.display="none"; return; }
+  const s = await res.json();
+  banner.style.display = "block";
+  banner.style.color = s.free_tutor_slots_left>0 ? "#166534" : "#dc2626";
+  banner.textContent = `🎁 باقي ${s.free_tutor_slots_left} من ${s.free_tutor_limit} اشتراك مجاني (سنة) للمدرسين`;
+}
 async function load(){
   const key = document.getElementById("key").value;
   localStorage.setItem("nagah_admin_key", key);
+  loadStats(key);
   const res = await fetch("/api/admin/providers?status="+currentStatus, { headers: { "x-admin-key": key } });
   const list = document.getElementById("list");
   if(!res.ok){ list.innerHTML = '<div class="empty">مفتاح غير صحيح أو حصل خطأ</div>'; return; }
@@ -60,7 +71,10 @@ async function load(){
           <div style="font-size:13px; color:#6b7280;">📍 ${p.country}${p.area ? " - "+p.area : ""} | ${p.price} | 📞 ${p.phone} | ${modeLabel(p.mode)} | ${p.group_type==='group' ? 'مجموعة حتى '+p.max_students : 'فردي'} | دفع ${p.payment_method==='cash'?'نقدي':'تحويل'}</div>
           <div style="font-size:12px; color:#6b7280; margin-top:4px;">${p.degree||""} ${p.experience_years?('- '+p.experience_years+' سنوات خبرة'):''} | جنسية: ${p.nationality||"-"} | ميلاد: ${p.dob||"-"}</div>
           <div style="font-size:12px; color:#6b7280; margin-top:4px;">🕒 ${(p.availability_days&&p.availability_days.length) ? p.availability_days.join("، ") : "لم يحدد أيام"} ${(p.availability_from&&p.availability_to) ? ('| '+p.availability_from+' - '+p.availability_to) : ""}</div>
-          ${p.subscription_start ? `<div style="font-size:12px; margin-top:4px;" class="${p.expired?'sub-bad':'sub-ok'}">📅 الاشتراك: من ${p.subscription_start.slice(0,10)} لحد ${p.subscription_end.slice(0,10)} — ${p.expired ? 'منتهي' : (p.days_left+' يوم متبقي')} ${p.active===false ? '(موقوف يدويًا)' : ''}</div>` : `<div style="font-size:12px; color:#6b7280; margin-top:4px;">📅 الاشتراك هيبدأ بمجرد القبول</div>`}
+          ${p.subscription_start ? `<div style="font-size:12px; margin-top:4px;" class="${p.expired?'sub-bad':'sub-ok'}">📅 الاشتراك: من ${p.subscription_start.slice(0,10)} لحد ${p.subscription_end.slice(0,10)} — ${p.expired ? 'منتهي' : (p.days_left+' يوم متبقي')} ${p.active===false ? '(موقوف يدويًا)' : ''}</div>` : `<div style="font-size:12px; margin-top:4px;" class="sub-bad">📅 مفيش اشتراك فعال (العرض المجاني خلص أو لسه هيتقبل) — فعّل يدويًا:
+            <input type="number" min="1" value="12" id="months-${p.id}" style="width:60px; display:inline-block; margin-inline:4px;"> شهر
+            <button class="btn reset" style="padding:4px 10px;" onclick="setSub(${p.id})">تفعيل</button>
+          </div>`}
           <div style="font-size:12px; color:#6b7280; margin-top:4px;">${p.bio||""}</div>
         </div>
         <div style="display:flex; gap:6px; flex-wrap:wrap;">
@@ -75,7 +89,17 @@ async function load(){
 }
 async function act(id, action){
   const key = localStorage.getItem("nagah_admin_key") || document.getElementById("key").value;
-  await fetch(`/api/admin/providers/${id}/${action}`, { method:"POST", headers: { "x-admin-key": key } });
+  const res = await fetch(`/api/admin/providers/${id}/${action}`, { method:"POST", headers: { "x-admin-key": key } });
+  const data = await res.json().catch(()=>({}));
+  if(action==="approve" && data.got_free_year===false){
+    alert("العرض المجاني لأول 100 مدرس خلص. المدرس اتقبل بس محتاج تفعيل اشتراك يدوي من تحت.");
+  }
+  load();
+}
+async function setSub(id){
+  const months = document.getElementById("months-"+id).value;
+  const key = localStorage.getItem("nagah_admin_key") || document.getElementById("key").value;
+  await fetch(`/api/admin/providers/${id}/set-subscription`, { method:"POST", headers: { "Content-Type":"application/json", "x-admin-key": key }, body: JSON.stringify({months}) });
   load();
 }
 async function resetPw(id){
