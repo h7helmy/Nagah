@@ -6,12 +6,14 @@ const DATA_PATH = process.env.DATA_PATH || path.join(__dirname, "data.json");
 
 function seedData() {
   return {
-    nextIds: { tutor: 1, parent: 1, review: 1, booking: 1 },
-    tutors: [],
-    parents: [],
-    reviews: [],
-    bookings: [],
-    favorites: [], // { parent_id, tutor_id }
+    nextIds: { provider: 1, seeker: 1, review: 1, booking: 1 },
+    // providers: مدرس فردي (tutor) أو مركز تعليمي (center)
+    providers: [],
+    // seekers: ولي أمر (parent) أو طالب (student)
+    seekers: [],
+    reviews: [],   // { id, provider_id, name, rating, text, created_at }
+    bookings: [],  // { id, provider_id, seeker_id, status, created_at }
+    favorites: [], // { seeker_id, provider_id }
   };
 }
 

@@ -20,13 +20,17 @@
   .search-big{width:100%; padding:14px 16px; border:1px solid var(--border); border-radius:12px; font-size:15px; background:#fafafa; color:var(--text);}
   .chips{display:flex; gap:6px; flex-wrap:wrap; margin-top:10px;}
   .chip{background:#eef2ff; color:var(--primary); border:none; padding:6px 12px; border-radius:20px; font-size:12px; cursor:pointer;}
-  input, textarea{width:100%; padding:9px 10px; border:1px solid var(--border); border-radius:10px; font-size:13px; background:#fafafa; color:var(--text); font-family:inherit;}
+  .day-chip{background:#f3f4f6; color:var(--muted); border:1px solid var(--border); padding:6px 10px; border-radius:20px; font-size:12px; cursor:pointer;}
+  .day-chip.active{background:var(--primary); color:#fff; border-color:var(--primary);}
+  .filters{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px;}
+  @media(min-width:640px){.filters{grid-template-columns:repeat(4,1fr);}}
+  input, select, textarea{width:100%; padding:9px 10px; border:1px solid var(--border); border-radius:10px; font-size:13px; background:#fafafa; color:var(--text); font-family:inherit;}
   .btn{cursor:pointer; border:none; border-radius:10px; padding:10px 16px; font-size:14px; font-weight:600;}
   .btn-primary{background:var(--primary); color:#fff;}
   .btn-outline{background:#fff; border:1px solid var(--primary); color:var(--primary);}
   .btn-block{width:100%;}
   .section{margin-top:22px;}
-  .section h2{font-size:17px; margin-bottom:10px;}
+  .section h2{font-size:17px; margin-bottom:10px; display:flex; align-items:center; justify-content:space-between;}
   .muted{color:var(--muted); font-size:13px;}
   .grid{display:grid; grid-template-columns:1fr; gap:12px;}
   @media(min-width:640px){.grid{grid-template-columns:1fr 1fr;}}
@@ -36,11 +40,13 @@
   .avatar{width:52px; height:52px; border-radius:50%; background:var(--primary); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:18px; flex-shrink:0;}
   .name{font-weight:700; font-size:15px;}
   .tag{display:inline-block; background:#eef2ff; color:var(--primary); font-size:11px; padding:2px 8px; border-radius:20px; margin-top:4px;}
-  .verified{display:inline-flex; background:#ecfdf3; color:var(--success); font-size:11px; padding:2px 8px; border-radius:20px; margin-inline-start:4px;}
+  .tag-center{background:#fdf4ff; color:#a21caf;}
+  .top-badge{display:inline-flex; align-items:center; gap:3px; background:#fffbeb; color:#92400e; font-size:11px; padding:2px 8px; border-radius:20px; margin-inline-start:4px; font-weight:700;}
   .stars{color:var(--accent); font-size:13px; margin-top:6px;}
   .price{font-weight:700; color:var(--primary-dark); font-size:14px;}
-  .card-footer{display:flex; justify-content:space-between; align-items:center; margin-top:10px; font-size:12px; color:var(--muted);}
+  .card-footer{display:flex; justify-content:space-between; align-items:center; margin-top:10px; font-size:12px; color:var(--muted); flex-wrap:wrap; gap:4px;}
   .badge-region{background:#fff7ed; color:#c2410c; padding:2px 8px; border-radius:20px; font-size:11px;}
+  .badge-mode{background:#eefaf1; color:#166534; padding:2px 8px; border-radius:20px; font-size:11px;}
   .cta-row{margin-top:10px;} .cta-row .btn{width:100%;}
   .modal-overlay{position:fixed; inset:0; background:rgba(0,0,0,.5); display:none; align-items:flex-end; justify-content:center; z-index:50;}
   .modal-overlay.open{display:flex;}
@@ -55,6 +61,7 @@
   .stars-input span{color:#d1d5db;} .stars-input span.active{color:var(--accent);}
   form .field{margin-bottom:10px;}
   form label{display:block; font-size:12px; color:var(--muted); margin-bottom:4px;}
+  .field-row{display:grid; grid-template-columns:1fr 1fr; gap:8px;}
   nav.bottom{position:fixed; bottom:0; right:0; left:0; background:#fff; border-top:1px solid var(--border); display:flex; z-index:40;}
   nav.bottom button{flex:1; background:none; border:none; padding:10px 4px; font-size:11px; color:var(--muted); cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:3px;}
   nav.bottom button.active{color:var(--primary); font-weight:700;}
@@ -67,6 +74,11 @@
   .view{display:none;} .view.active{display:block;}
   .center-title{text-align:center; margin-bottom:14px;}
   .center-title h2{font-size:18px;} .center-title p{font-size:13px; color:var(--muted); margin-top:4px;}
+  .role-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px;}
+  .role-card{background:var(--card); border:2px solid var(--border); border-radius:var(--radius); padding:16px 10px; text-align:center; cursor:pointer;}
+  .role-card.active{border-color:var(--primary); background:#eef2ff;}
+  .role-card .ic{font-size:26px;}
+  .role-card .lbl{font-size:13px; font-weight:700; margin-top:6px;}
 </style>
 </head>
 <body>
@@ -74,50 +86,139 @@
 <header class="top">
   <div class="container">
     <h1>🎓 نجاح</h1>
-    <p>دور على مدرسك في ثانية واحدة — من غير خطوات معقدة</p>
+    <p>منصة عربية لربط المدرسين والمراكز التعليمية بأولياء الأمور والطلاب</p>
   </div>
 </header>
 
 <div class="container">
+
   <div id="view-search" class="view active">
     <div class="search-card">
-      <input class="search-big" id="q" placeholder="🔎 اكتب المادة أو المرحلة أو المنطقة...">
+      <input class="search-big" id="q" placeholder="🔎 اكتب المادة أو الاسم أو المنطقة...">
       <div class="chips" id="chips"></div>
+      <div class="filters">
+        <select id="f-country" onchange="renderGrid()"><option value="">كل الدول</option></select>
+        <input id="f-area" placeholder="المدينة/المنطقة" oninput="debouncedRender()">
+        <select id="f-mode" onchange="renderGrid()">
+          <option value="">أونلاين/حضوري</option>
+          <option value="online">أونلاين</option>
+          <option value="in_person">حضوري</option>
+        </select>
+        <select id="f-group" onchange="renderGrid()">
+          <option value="">فردي/مجموعة</option>
+          <option value="individual">فردي</option>
+          <option value="group">مجموعة</option>
+        </select>
+      </div>
     </div>
-    <div class="free-banner">🎉 السنة الأولى مجانًا بالكامل لكل المدرسين وأولياء الأمور — بدون أي عمولة</div>
+
+    <div class="free-banner">🎉 السنة الأولى مجانًا بالكامل لكل المدرسين والمراكز وأولياء الأمور — بدون أي عمولة</div>
+
     <div class="section">
-      <h2>المدرسون والمدرسات <span class="muted" id="result-count"></span></h2>
+      <h2>⭐ الأعلى تقييمًا <span class="muted" id="result-count"></span></h2>
       <div class="grid" id="tutor-grid"></div>
     </div>
   </div>
 
-  <div id="view-tutor-reg" class="view">
-    <div class="center-title"><h2>تسجيل كمدرس / مدرسة</h2><p>خطوة واحدة بس — البيانات تتراجع من فريقنا خلال 24-48 ساعة</p></div>
-    <form id="tutor-form" class="card">
-      <div class="field"><label>الاسم الكامل</label><input required id="t-name" placeholder="مثال: أ. محمد السيد"></div>
-      <div class="field"><label>المادة</label><input required id="t-subject-new" placeholder="مثال: رياضيات"></div>
-      <div class="field"><label>المرحلة الدراسية</label><input id="t-stage-new" placeholder="مثال: ثانوي"></div>
-      <div class="field"><label>المنطقة</label><input required id="t-area-new" placeholder="مثال: مدينة نصر"></div>
-      <div class="field"><label>سعر الحصة (جنيه)</label><input required type="number" id="t-price" placeholder="150"></div>
-      <div class="field"><label>نبذة مختصرة (اختياري)</label><textarea id="t-bio" rows="2"></textarea></div>
-      <div class="field"><label>رقم الهاتف/واتساب</label><input required id="t-phone" placeholder="01xxxxxxxxx"></div>
+  <div id="view-register" class="view">
+    <div class="center-title">
+      <h2>سجّل في نجاح</h2>
+      <p>اختر نوع الحساب المناسب لك</p>
+    </div>
+    <div class="role-grid">
+      <div class="role-card" data-role="tutor" onclick="pickRole('tutor')"><div class="ic">🧑‍🏫</div><div class="lbl">مدرس / مدرسة</div></div>
+      <div class="role-card" data-role="center" onclick="pickRole('center')"><div class="ic">🏫</div><div class="lbl">مركز تعليمي</div></div>
+      <div class="role-card" data-role="parent" onclick="pickRole('parent')"><div class="ic">👪</div><div class="lbl">ولي أمر</div></div>
+      <div class="role-card" data-role="student" onclick="pickRole('student')"><div class="ic">🎒</div><div class="lbl">طالب</div></div>
+    </div>
+
+    <form id="provider-form" class="card" style="display:none;">
+      <div class="field"><label id="provider-name-label">اسم المدرس/المدرسة</label><input required id="pr-name"></div>
+      <div class="field-row">
+        <div class="field"><label>اسم المستخدم</label><input id="pr-username"></div>
+        <div class="field"><label>رقم الهاتف/واتساب</label><input required id="pr-phone" placeholder="01xxxxxxxxx"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>البريد الإلكتروني</label><input required type="email" id="pr-email"></div>
+        <div class="field"><label>الجنسية</label><input required id="pr-nat"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>تاريخ الميلاد</label><input required type="date" id="pr-dob"></div>
+        <div class="field"><label>الدولة</label><select required id="pr-country"></select></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>المدينة/المنطقة</label><input id="pr-area"></div>
+        <div class="field"><label>التخصص/المادة</label><input required id="pr-subject" placeholder="مثال: رياضيات"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label id="pr-degree-label">الدرجة العلمية</label><input id="pr-degree"></div>
+        <div class="field"><label>سنوات الخبرة</label><input type="number" id="pr-exp" min="0"></div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>طريقة التدريس</label>
+          <select required id="pr-mode">
+            <option value="both">أونلاين وحضوري</option>
+            <option value="online">أونلاين فقط</option>
+            <option value="in_person">حضوري فقط</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>نوع الدرس</label>
+          <select required id="pr-group" onchange="document.getElementById('pr-maxstudents-field').style.display = this.value==='group' ? 'block':'none';">
+            <option value="individual">فردي</option>
+            <option value="group">مجموعة</option>
+          </select>
+        </div>
+      </div>
+      <div class="field" id="pr-maxstudents-field" style="display:none;"><label>عدد الطلبة بالمجموعة</label><input type="number" id="pr-maxstudents" min="2" value="4"></div>
+      <div class="field">
+        <label>الأيام المتاحة</label>
+        <div class="chips" id="pr-days"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>من الساعة</label><input type="time" id="pr-from" value="16:00"></div>
+        <div class="field"><label>لحد الساعة</label><input type="time" id="pr-to" value="21:00"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>سعر الحصة (جنيه/ما يعادله)</label><input required type="number" id="pr-price"></div>
+        <div class="field">
+          <label>طريقة الدفع</label>
+          <select required id="pr-payment">
+            <option value="cash">نقدي</option>
+            <option value="transfer">تحويل بنكي</option>
+          </select>
+        </div>
+      </div>
+      <div class="field"><label>نبذة مختصرة (اختياري)</label><textarea id="pr-bio" rows="2"></textarea></div>
       <button class="btn btn-primary btn-block" type="submit">إرسال للمراجعة</button>
+    </form>
+
+    <form id="seeker-form" class="card" style="display:none;">
+      <div class="field"><label>الاسم</label><input required id="sk-name"></div>
+      <div class="field-row">
+        <div class="field"><label>اسم المستخدم</label><input id="sk-username"></div>
+        <div class="field"><label>رقم الهاتف</label><input required id="sk-phone" placeholder="01xxxxxxxxx"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>البريد الإلكتروني</label><input type="email" id="sk-email"></div>
+        <div class="field"><label>الجنسية</label><input required id="sk-nat"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>تاريخ الميلاد</label><input required type="date" id="sk-dob"></div>
+        <div class="field"><label>الدولة</label><select required id="sk-country"></select></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>المدينة/المنطقة</label><input id="sk-area"></div>
+        <div class="field" id="sk-children-field"><label>عدد الأطفال</label><input type="number" id="sk-children" min="0" value="1"></div>
+      </div>
+      <button class="btn btn-primary btn-block" type="submit">إنشاء الحساب</button>
     </form>
     <div class="free-banner">💰 مجاني تمامًا في السنة الأولى — بدون أي عمولة أو رسوم اشتراك</div>
   </div>
 
-  <div id="view-parent-reg" class="view">
-    <div class="center-title"><h2>تسجيل ولي أمر</h2><p>3 حقول بس، وتقدر تشوف بيانات تواصل أي مدرس فورًا</p></div>
-    <form id="parent-form" class="card">
-      <div class="field"><label>الاسم</label><input required id="p-name" placeholder="مثال: سارة أحمد"></div>
-      <div class="field"><label>رقم الهاتف</label><input required id="p-phone" placeholder="01xxxxxxxxx"></div>
-      <div class="field"><label>المنطقة</label><input id="p-area" placeholder="مثال: مدينة نصر"></div>
-      <button class="btn btn-primary btn-block" type="submit">إنشاء الحساب</button>
-    </form>
-  </div>
-
   <div id="view-dashboard" class="view">
-    <div class="center-title"><h2 id="dash-title">لوحة ولي الأمر</h2><p>المدرسون المفضلون وطلبات الحجز</p></div>
+    <div class="center-title"><h2 id="dash-title">لوحتي</h2><p>المدرسون والمراكز المفضلة وطلبات الحجز</p></div>
     <div class="section"><h2>⭐ المفضلة</h2><div class="grid" id="fav-grid"></div></div>
     <div class="section"><h2>📩 طلبات التواصل / الحجوزات</h2><div id="booking-list"></div></div>
   </div>
@@ -128,14 +229,26 @@
 
 <nav class="bottom">
   <button data-view="view-search" class="active"><span class="ic">🔎</span>بحث</button>
-  <button data-view="view-tutor-reg"><span class="ic">🧑‍🏫</span>تسجيل مدرس</button>
-  <button data-view="view-parent-reg"><span class="ic">👪</span>تسجيل ولي أمر</button>
+  <button data-view="view-register"><span class="ic">📝</span>تسجيل</button>
   <button data-view="view-dashboard"><span class="ic">📋</span>لوحتي</button>
 </nav>
 
 <script>
-let currentUser = JSON.parse(localStorage.getItem("darrisni_parent") || "null");
-let lastTutors = [];
+const ARAB_COUNTRIES = ["مصر","السعودية","الإمارات","الكويت","قطر","البحرين","عُمان","الأردن","لبنان","سوريا","العراق","فلسطين","اليمن","ليبيا","تونس","الجزائر","المغرب","السودان","موريتانيا","الصومال","جيبوتي","جزر القمر"];
+const WEEK_DAYS = ["السبت","الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة"];
+let selectedDays = [];
+function renderDayChips(){
+  const el = document.getElementById("pr-days");
+  el.innerHTML = WEEK_DAYS.map(d=>`<button type="button" class="day-chip" data-day="${d}" onclick="toggleDay('${d}', this)">${d}</button>`).join("");
+}
+function toggleDay(day, btn){
+  if(selectedDays.includes(day)){ selectedDays = selectedDays.filter(d=>d!==day); btn.classList.remove("active"); }
+  else { selectedDays.push(day); btn.classList.add("active"); }
+}
+renderDayChips();
+
+let currentUser = JSON.parse(localStorage.getItem("nagah_seeker") || "null");
+let lastProviders = [];
 
 async function api(path, opts={}) {
   const res = await fetch(path, { headers: {"Content-Type":"application/json"}, ...opts });
@@ -144,7 +257,18 @@ async function api(path, opts={}) {
   return data;
 }
 function starString(r){ const full=Math.round(r||0); return "★".repeat(full)+"☆".repeat(5-full)+" ("+(r||0).toFixed(1)+")"; }
-function initials(name){ const parts=name.trim().split(" "); return parts[parts.length-1].charAt(0); }
+function initials(name){ const parts=(name||"").trim().split(" "); return (parts[parts.length-1]||"?").charAt(0); }
+function modeLabel(m){ return m==="online" ? "🖥️ أونلاين" : m==="in_person" ? "🏠 حضوري" : "🖥️🏠 أونلاين وحضوري"; }
+
+function fillCountrySelects(){
+  ["f-country","pr-country","sk-country"].forEach(id=>{
+    const el = document.getElementById(id);
+    ARAB_COUNTRIES.forEach(c=>{
+      const o = document.createElement("option"); o.value=c; o.textContent=c; el.appendChild(o);
+    });
+  });
+}
+fillCountrySelects();
 
 document.querySelectorAll("nav.bottom button").forEach(btn=>{
   btn.addEventListener("click",()=>{
@@ -156,61 +280,114 @@ document.querySelectorAll("nav.bottom button").forEach(btn=>{
   });
 });
 
+function pickRole(role){
+  document.querySelectorAll(".role-card").forEach(c=>c.classList.toggle("active", c.dataset.role===role));
+  const providerForm = document.getElementById("provider-form");
+  const seekerForm = document.getElementById("seeker-form");
+  if(role==="tutor" || role==="center"){
+    providerForm.style.display = "block";
+    seekerForm.style.display = "none";
+    providerForm.dataset.type = role;
+    document.getElementById("provider-name-label").textContent = role==="center" ? "اسم المركز التعليمي" : "اسم المدرس/المدرسة";
+    document.getElementById("pr-degree-label").textContent = role==="center" ? "الترخيص/الاعتماد (اختياري)" : "الدرجة العلمية";
+  } else {
+    providerForm.style.display = "none";
+    seekerForm.style.display = "block";
+    seekerForm.dataset.type = role;
+    document.getElementById("sk-children-field").style.display = role==="parent" ? "block" : "none";
+  }
+}
+
+let debounceTimer;
+function debouncedRender(){ clearTimeout(debounceTimer); debounceTimer=setTimeout(renderGrid, 250); }
+document.getElementById("q").addEventListener("input", debouncedRender);
+
 async function renderGrid(){
   const q = document.getElementById("q").value.trim();
+  const country = document.getElementById("f-country").value;
+  const area = document.getElementById("f-area").value.trim();
+  const mode = document.getElementById("f-mode").value;
+  const groupType = document.getElementById("f-group").value;
+  const params = new URLSearchParams();
+  if(q) params.set("q", q + (area ? " "+area : ""));
+  else if(area) params.set("q", area);
+  if(country) params.set("country", country);
+  if(mode) params.set("mode", mode);
+  if(groupType) params.set("group_type", groupType);
   try{
-    const rows = await api("/api/tutors?q="+encodeURIComponent(q));
-    lastTutors = rows;
+    const rows = await api("/api/providers?"+params.toString());
+    lastProviders = rows;
     document.getElementById("result-count").textContent = "("+rows.length+")";
     const grid = document.getElementById("tutor-grid");
-    if(rows.length===0){ grid.innerHTML='<div class="empty">لا توجد نتائج — جرّب كلمة تانية زي اسم المادة أو المنطقة</div>'; return; }
-    grid.innerHTML = rows.map(t=>`
-      <div class="card" onclick="openProfile(${t.id})">
+    if(rows.length===0){ grid.innerHTML='<div class="empty">لا توجد نتائج — جرّب كلمة تانية أو غيّر الفلاتر</div>'; return; }
+    grid.innerHTML = rows.map((p,i)=>`
+      <div class="card" onclick="openProfile(${p.id})">
         <div class="card-top">
-          <div class="avatar">${initials(t.name)}</div>
-          <div><div class="name">${t.name}</div><span class="tag">${t.subject}</span> <span class="tag">${t.stage||""}</span></div>
+          <div class="avatar">${initials(p.name)}</div>
+          <div>
+            <div class="name">${p.name} ${i<3 && p.rating>0 ? '<span class="top-badge">🏆 الأعلى تقييمًا</span>':''}</div>
+            <span class="tag ${p.type==='center'?'tag-center':''}">${p.type==='center' ? '🏫 مركز تعليمي' : '🧑‍🏫 مدرس'}</span>
+            <span class="tag">${p.subject}</span>
+          </div>
         </div>
-        <div class="stars">${starString(t.rating)}</div>
-        <div class="card-footer"><span class="badge-region">📍 ${t.area}</span><span class="price">${t.price} ج.م / حصة</span></div>
+        <div class="stars">${starString(p.rating)}</div>
+        <div class="card-footer">
+          <span class="badge-region">📍 ${p.country}${p.area ? " - "+p.area : ""}</span>
+          <span class="badge-mode">${modeLabel(p.mode)}</span>
+          <span class="price">${p.price} / حصة</span>
+        </div>
         <div class="cta-row"><button class="btn btn-primary">عرض الملف والتواصل</button></div>
       </div>`).join("");
   }catch(e){ showToast(e.message); }
 }
-document.getElementById("q").addEventListener("input", debounce(renderGrid, 250));
-function debounce(fn, ms){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms); }; }
 
 const subjectsChips = ["رياضيات","لغة إنجليزية","فيزياء","كيمياء","لغة عربية"];
 document.getElementById("chips").innerHTML = subjectsChips.map(s=>`<button class="chip" onclick="document.getElementById('q').value='${s}'; renderGrid();">${s}</button>`).join("");
 
 async function openProfile(id){
   try{
-    const url = "/api/tutors/"+id+(currentUser?("?parent_id="+currentUser.id):"");
-    const t = await api(url);
-    const contactBlock = t.phone
-      ? `<div class="contact-box"><strong>📞 ${t.phone}</strong><div class="muted" style="margin-top:4px;">تواصل مباشرة لتنسيق موعد الحصة</div></div>`
-      : `<div class="contact-hidden">🔒 سجّل كولي أمر (3 حقول بس) لعرض رقم التواصل</div>`;
-    const reviewsHtml = t.reviews.length
-      ? t.reviews.map(r=>`<div class="review"><div class="who">${r.parent_name} — ${"★".repeat(r.rating)}</div><div class="muted">${r.text}</div></div>`).join("")
+    const url = "/api/providers/"+id+(currentUser?("?seeker_id="+currentUser.id):"");
+    const p = await api(url);
+    const contactBlock = p.phone
+      ? `<div class="contact-box"><strong>📞 ${p.phone}</strong><div class="muted" style="margin-top:4px;">تواصل مباشرة لتنسيق موعد الحصة</div></div>`
+      : `<div class="contact-hidden">🔒 سجّل كولي أمر أو طالب لعرض رقم التواصل</div>`;
+    const reviewsHtml = p.reviews.length
+      ? p.reviews.map(r=>`<div class="review"><div class="who">${r.seeker_name} — ${"★".repeat(r.rating)}</div><div class="muted">${r.text}</div></div>`).join("")
       : `<p class="muted" style="padding:8px 0;">لا توجد تقييمات بعد — كن أول من يقيّم</p>`;
     document.getElementById("modal-content").innerHTML = `
       <button class="modal-close" onclick="closeModal()">✕</button>
       <div class="card-top">
-        <div class="avatar" style="width:64px;height:64px;font-size:22px;">${initials(t.name)}</div>
-        <div><div class="name" style="font-size:17px;">${t.name}</div>
-        <span class="tag">${t.subject}</span> <span class="tag">${t.stage||""}</span> <span class="badge-region">📍 ${t.area}</span></div>
+        <div class="avatar" style="width:64px;height:64px;font-size:22px;">${initials(p.name)}</div>
+        <div><div class="name" style="font-size:17px;">${p.name}</div>
+        <span class="tag ${p.type==='center'?'tag-center':''}">${p.type==='center' ? '🏫 مركز تعليمي' : '🧑‍🏫 مدرس'}</span>
+        <span class="tag">${p.subject}</span>
+        <span class="badge-region">📍 ${p.country}${p.area ? " - "+p.area : ""}</span></div>
       </div>
-      <div class="stars" style="margin-top:10px;">${starString(t.rating)} — ${t.reviewCount} تقييم</div>
-      <p style="margin-top:10px; font-size:14px; line-height:1.6;">${t.bio||""}</p>
-      <p class="price" style="margin-top:6px;">${t.price} جنيه / الحصة</p>
+      <div class="stars" style="margin-top:10px;">${starString(p.rating)} — ${p.reviewCount} تقييم</div>
+      <p style="margin-top:10px; font-size:14px; line-height:1.6;">${p.bio||""}</p>
+      <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:8px;">
+        <span class="badge-mode">${modeLabel(p.mode)}</span>
+        <span class="tag">${p.group_type==='group' ? 'مجموعة (حتى '+p.max_students+' طلبة)' : 'فردي'}</span>
+        ${p.degree ? `<span class="tag">${p.degree}</span>` : ""}
+        ${p.experience_years ? `<span class="tag">${p.experience_years} سنوات خبرة</span>` : ""}
+        <span class="tag">${p.payment_method==='cash' ? 'دفع نقدي' : 'دفع تحويل'}</span>
+      </div>
+      <p class="price" style="margin-top:10px;">${p.price} / الحصة</p>
+      ${(p.availability_days && p.availability_days.length) ? `
+      <div class="contact-box" style="background:#eff6ff; border-color:var(--primary);">
+        <strong>🕒 الوقت المتاح للتواصل والحجز</strong>
+        <div class="muted" style="margin-top:6px;">الأيام: ${p.availability_days.join("، ")}</div>
+        ${(p.availability_from && p.availability_to) ? `<div class="muted" style="margin-top:2px;">من ${p.availability_from} لحد ${p.availability_to}</div>` : ""}
+      </div>` : ""}
       ${contactBlock}
       <div style="display:flex; gap:8px; margin-top:12px;">
-        <button class="btn btn-primary" style="flex:1;" onclick="requestBooking(${t.id})">طلب حجز حصة</button>
-        <button class="fav-btn" onclick="toggleFav(${t.id})" title="إضافة للمفضلة">🤍</button>
+        <button class="btn btn-primary" style="flex:1;" onclick="requestBooking(${p.id})">طلب حجز حصة</button>
+        <button class="fav-btn" onclick="toggleFav(${p.id})" title="إضافة للمفضلة">🤍</button>
       </div>
       <div class="section"><h2 style="font-size:15px;">التقييمات</h2>${reviewsHtml}</div>
       <div class="section">
-        <h2 style="font-size:15px;">قيّم المدرس بلمسة واحدة</h2>
-        <div class="stars-input" id="star-input">${[1,2,3,4,5].map(n=>`<span data-n="${n}" onclick="rateNow(${t.id},${n})">★</span>`).join("")}</div>
+        <h2 style="font-size:15px;">قيّم بلمسة واحدة</h2>
+        <div class="stars-input" id="star-input">${[1,2,3,4,5].map(n=>`<span data-n="${n}" onclick="rateNow(${p.id},${n})">★</span>`).join("")}</div>
       </div>`;
     document.getElementById("modal-overlay").classList.add("open");
   }catch(e){ showToast(e.message); }
@@ -218,80 +395,92 @@ async function openProfile(id){
 function closeModal(){ document.getElementById("modal-overlay").classList.remove("open"); renderGrid(); }
 document.getElementById("modal-overlay").addEventListener("click", e=>{ if(e.target.id==="modal-overlay") closeModal(); });
 
-async function rateNow(tid, n){
+async function rateNow(pid, n){
   try{
-    await api("/api/tutors/"+tid+"/reviews", { method:"POST", body: JSON.stringify({
-      parent_name: currentUser ? currentUser.name+" (ولي أمر)" : "ولي أمر", rating:n, text:"(تقييم سريع)"
+    await api("/api/providers/"+pid+"/reviews", { method:"POST", body: JSON.stringify({
+      seeker_name: currentUser ? currentUser.name : "زائر", rating:n, text:"(تقييم سريع)"
     })});
     showToast("تم إرسال تقييمك، شكرًا لك! ⭐");
-    openProfile(tid);
+    openProfile(pid);
   }catch(e){ showToast(e.message); }
 }
 async function toggleFav(id){
-  if(!currentUser){ showToast("سجّل كولي أمر أولًا"); return; }
-  try{ await api("/api/parents/"+currentUser.id+"/favorites/"+id, { method:"POST" }); showToast("تمت الإضافة للمفضلة"); }
+  if(!currentUser){ showToast("سجّل كولي أمر أو طالب أولًا"); return; }
+  try{ await api("/api/seekers/"+currentUser.id+"/favorites/"+id, { method:"POST" }); showToast("تمت الإضافة للمفضلة"); }
   catch(e){ showToast(e.message); }
 }
 async function requestBooking(id){
-  if(!currentUser){ showToast("سجّل كولي أمر أولًا (3 حقول بس) لطلب الحجز"); return; }
+  if(!currentUser){ showToast("سجّل كولي أمر أو طالب أولًا لطلب الحجز"); return; }
   try{
-    await api("/api/bookings", { method:"POST", body: JSON.stringify({ tutor_id:id, parent_id: currentUser.id }) });
+    await api("/api/bookings", { method:"POST", body: JSON.stringify({ provider_id:id, seeker_id: currentUser.id }) });
     showToast("تم إرسال طلب الحجز");
     closeModal();
   }catch(e){ showToast(e.message); }
 }
 
-document.getElementById("tutor-form").addEventListener("submit", async e=>{
+document.getElementById("provider-form").addEventListener("submit", async e=>{
   e.preventDefault();
+  const type = e.target.dataset.type || "tutor";
   try{
-    await api("/api/tutors", { method:"POST", body: JSON.stringify({
-      name: t("t-name"), subject: t("t-subject-new"), stage: t("t-stage-new"),
-      area: t("t-area-new"), price: parseFloat(t("t-price"))||0, bio: t("t-bio"), phone: t("t-phone")
+    await api("/api/providers", { method:"POST", body: JSON.stringify({
+      type,
+      name: v("pr-name"), username: v("pr-username"), phone: v("pr-phone"), email: v("pr-email"),
+      nationality: v("pr-nat"), dob: v("pr-dob"), country: v("pr-country"), area: v("pr-area"),
+      subject: v("pr-subject"), degree: v("pr-degree"), experience_years: v("pr-exp"),
+      mode: v("pr-mode"), group_type: v("pr-group"), max_students: v("pr-maxstudents"),
+      price: v("pr-price"), payment_method: v("pr-payment"), bio: v("pr-bio"),
+      availability_days: selectedDays, availability_from: v("pr-from"), availability_to: v("pr-to"),
     })});
     showToast("تم إرسال طلب التسجيل! هنراجع بياناتك خلال 24-48 ساعة");
     e.target.reset();
+    selectedDays = []; renderDayChips();
   }catch(err){ showToast(err.message); }
 });
-function t(id){ return document.getElementById(id).value; }
 
-document.getElementById("parent-form").addEventListener("submit", async e=>{
+document.getElementById("seeker-form").addEventListener("submit", async e=>{
   e.preventDefault();
+  const type = e.target.dataset.type || "parent";
   try{
-    const p = await api("/api/parents", { method:"POST", body: JSON.stringify({ name: t("p-name"), phone: t("p-phone"), area: t("p-area") }) });
-    currentUser = p;
-    localStorage.setItem("darrisni_parent", JSON.stringify(p));
-    showToast("أهلًا "+p.name+"! دلوقتي تقدر تشوف بيانات تواصل المدرسين مباشرة.");
+    const s = await api("/api/seekers", { method:"POST", body: JSON.stringify({
+      type, name: v("sk-name"), username: v("sk-username"), phone: v("sk-phone"), email: v("sk-email"),
+      nationality: v("sk-nat"), dob: v("sk-dob"), country: v("sk-country"), area: v("sk-area"),
+      children_count: v("sk-children"),
+    })});
+    currentUser = s;
+    localStorage.setItem("nagah_seeker", JSON.stringify(s));
+    showToast("أهلًا "+s.name+"! دلوقتي تقدر تشوف بيانات تواصل المدرسين والمراكز مباشرة.");
     e.target.reset();
     document.querySelector('[data-view="view-search"]').click();
   }catch(err){ showToast(err.message); }
 });
+function v(id){ return document.getElementById(id).value; }
 
 async function renderDashboard(){
-  document.getElementById("dash-title").textContent = currentUser ? "أهلًا "+currentUser.name : "لوحة ولي الأمر";
+  document.getElementById("dash-title").textContent = currentUser ? "أهلًا "+currentUser.name : "لوحتي";
   const favGrid = document.getElementById("fav-grid");
   const list = document.getElementById("booking-list");
   if(!currentUser){
-    favGrid.innerHTML = '<div class="empty">سجّل كولي أمر الأول عشان تشوف لوحتك</div>';
+    favGrid.innerHTML = '<div class="empty">سجّل كولي أمر أو طالب الأول عشان تشوف لوحتك</div>';
     list.innerHTML = "";
     return;
   }
   try{
-    const favs = await api("/api/parents/"+currentUser.id+"/favorites");
-    favGrid.innerHTML = favs.length ? favs.map(t=>`
-      <div class="card" onclick="openProfile(${t.id})">
-        <div class="card-top"><div class="avatar">${initials(t.name)}</div><div><div class="name">${t.name}</div><span class="tag">${t.subject}</span></div></div>
-        <div class="stars">${starString(t.rating)}</div>
-      </div>`).join("") : '<div class="empty">لا يوجد مدرسون في المفضلة بعد</div>';
+    const favs = await api("/api/seekers/"+currentUser.id+"/favorites");
+    favGrid.innerHTML = favs.length ? favs.map(p=>`
+      <div class="card" onclick="openProfile(${p.id})">
+        <div class="card-top"><div class="avatar">${initials(p.name)}</div><div><div class="name">${p.name}</div><span class="tag">${p.subject}</span></div></div>
+        <div class="stars">${starString(p.rating)}</div>
+      </div>`).join("") : '<div class="empty">لا يوجد مفضلة بعد</div>';
 
-    const bookings = await api("/api/parents/"+currentUser.id+"/bookings");
+    const bookings = await api("/api/seekers/"+currentUser.id+"/bookings");
     list.innerHTML = bookings.length ? bookings.map(b=>`
       <div class="card" style="cursor:default;">
         <div style="display:flex; justify-content:space-between; align-items:center;">
-          <div><div class="name">${b.tutor_name}</div><span class="muted">${b.subject} — ${b.price} ج.م</span></div>
+          <div><div class="name">${b.provider_name}</div><span class="muted">${b.subject} — ${b.price}</span></div>
           <span class="pill">${b.status}</span>
         </div>
         <div class="free-banner" style="margin-top:8px;">بدون عمولة على هذا الحجز (عرض السنة الأولى)</div>
-      </div>`).join("") : '<div class="empty">لا توجد طلبات حجز بعد — ابحث عن مدرس وابدأ التواصل</div>';
+      </div>`).join("") : '<div class="empty">لا توجد طلبات حجز بعد</div>';
   }catch(e){ showToast(e.message); }
 }
 
