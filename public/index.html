@@ -216,6 +216,7 @@
         <div class="field"><label>المحافظة</label><select id="sk-area"><option value="">اختر الدولة أولًا</option></select></div>
         <div class="field" id="sk-children-field"><label>عدد الأطفال</label><input type="number" id="sk-children" min="0" value="1"></div>
       </div>
+      <div class="field"><label>كلمة السر (6 حروف/أرقام على الأقل)</label><input required type="password" minlength="6" id="sk-password"></div>
       <button class="btn btn-primary btn-block" type="submit">إنشاء الحساب</button>
     </form>
     <div class="free-banner">💰 مجاني تمامًا في السنة الأولى — بدون أي عمولة أو رسوم اشتراك</div>
@@ -225,6 +226,24 @@
     <div class="center-title"><h2 id="dash-title">لوحتي</h2><p>المدرسون والمراكز المفضلة وطلبات الحجز</p></div>
     <div class="section"><h2>⭐ المفضلة</h2><div class="grid" id="fav-grid"></div></div>
     <div class="section"><h2>📩 طلبات التواصل / الحجوزات</h2><div id="booking-list"></div></div>
+    <button class="btn btn-outline btn-block" id="seeker-logout-btn" style="display:none; margin-top:10px;" onclick="seekerLogout()">تسجيل خروج</button>
+  </div>
+
+  <div id="view-provider" class="view">
+    <div id="provider-login-box">
+      <div class="center-title"><h2>تسجيل الدخول</h2><p>لكل الحسابات — مدرس، مركز تعليمي، ولي أمر، أو طالب</p></div>
+      <form id="provider-login-form" class="card">
+        <div class="field"><label>رقم الهاتف</label><input required id="pl-phone"></div>
+        <div class="field"><label>كلمة السر</label><input required type="password" id="pl-password"></div>
+        <button class="btn btn-primary btn-block" type="submit">دخول</button>
+      </form>
+    </div>
+    <div id="provider-dashboard-box" style="display:none;">
+      <div class="center-title"><h2 id="pd-name">أهلًا</h2><p id="pd-status"></p></div>
+      <div class="card" id="pd-subscription"></div>
+      <div class="section"><h2>📩 طلبات التواصل الواردة</h2><div id="pd-bookings"></div></div>
+      <button class="btn btn-outline btn-block" onclick="providerLogout()">تسجيل خروج</button>
+    </div>
   </div>
 </div>
 
@@ -234,6 +253,7 @@
 <nav class="bottom">
   <button data-view="view-search" class="active"><span class="ic">🔎</span>بحث</button>
   <button data-view="view-register"><span class="ic">📝</span>تسجيل</button>
+  <button data-view="view-provider"><span class="ic">🔑</span>دخول</button>
   <button data-view="view-dashboard"><span class="ic">📋</span>لوحتي</button>
 </nav>
 
@@ -295,6 +315,7 @@ function toggleDay(day, btn){
 renderDayChips();
 
 let currentUser = JSON.parse(localStorage.getItem("nagah_seeker") || "null");
+let providerUser = JSON.parse(localStorage.getItem("nagah_provider") || "null");
 let lastProviders = [];
 
 async function api(path, opts={}) {
@@ -330,6 +351,7 @@ document.querySelectorAll("nav.bottom button").forEach(btn=>{
     btn.classList.add("active");
     document.getElementById(btn.dataset.view).classList.add("active");
     if(btn.dataset.view==="view-dashboard") renderDashboard();
+    if(btn.dataset.view==="view-provider") renderProviderView();
   });
 });
 
@@ -514,7 +536,7 @@ document.getElementById("seeker-form").addEventListener("submit", async e=>{
     const s = await api("/api/seekers", { method:"POST", body: JSON.stringify({
       type, name: v("sk-name"), username: v("sk-username"), phone: v("sk-phone"), email: v("sk-email"),
       nationality: v("sk-nat"), dob: v("sk-dob"), country: v("sk-country"), area: v("sk-area"),
-      children_count: v("sk-children"),
+      children_count: v("sk-children"), password: v("sk-password"),
     })});
     currentUser = s;
     localStorage.setItem("nagah_seeker", JSON.stringify(s));
@@ -525,8 +547,14 @@ document.getElementById("seeker-form").addEventListener("submit", async e=>{
 });
 function v(id){ return document.getElementById(id).value; }
 
+function seekerLogout(){
+  currentUser = null;
+  localStorage.removeItem("nagah_seeker");
+  renderDashboard();
+}
 async function renderDashboard(){
   document.getElementById("dash-title").textContent = currentUser ? "أهلًا "+currentUser.name : "لوحتي";
+  document.getElementById("seeker-logout-btn").style.display = currentUser ? "block" : "none";
   const favGrid = document.getElementById("fav-grid");
   const list = document.getElementById("booking-list");
   if(!currentUser){
@@ -551,6 +579,55 @@ async function renderDashboard(){
         </div>
         <div class="free-banner" style="margin-top:8px;">بدون عمولة على هذا الحجز (عرض السنة الأولى)</div>
       </div>`).join("") : '<div class="empty">لا توجد طلبات حجز بعد</div>';
+  }catch(e){ showToast(e.message); }
+}
+
+document.getElementById("provider-login-form").addEventListener("submit", async e=>{
+  e.preventDefault();
+  try{
+    const res = await api("/api/login", { method:"POST", body: JSON.stringify({ phone: v("pl-phone"), password: v("pl-password") }) });
+    if(res.kind === "provider"){
+      providerUser = res;
+      localStorage.setItem("nagah_provider", JSON.stringify(res));
+      showToast("أهلًا "+res.name);
+      renderProviderView();
+    } else {
+      currentUser = res;
+      localStorage.setItem("nagah_seeker", JSON.stringify(res));
+      showToast("أهلًا "+res.name);
+      document.querySelector('[data-view="view-dashboard"]').click();
+    }
+  }catch(err){ showToast(err.message); }
+});
+function providerLogout(){
+  providerUser = null;
+  localStorage.removeItem("nagah_provider");
+  renderProviderView();
+}
+async function renderProviderView(){
+  const loginBox = document.getElementById("provider-login-box");
+  const dashBox = document.getElementById("provider-dashboard-box");
+  if(!providerUser){ loginBox.style.display="block"; dashBox.style.display="none"; return; }
+  try{
+    const p = await api("/api/providers/"+providerUser.id+"/me");
+    loginBox.style.display="none"; dashBox.style.display="block";
+    document.getElementById("pd-name").textContent = "أهلًا "+p.name;
+    const statusLabel = p.status==="approved" ? "✅ حسابك معتمد وظاهر في نتائج البحث" : p.status==="pending" ? "⏳ حسابك لسه قيد المراجعة" : "❌ حسابك مرفوض — تواصل مع الإدارة";
+    document.getElementById("pd-status").textContent = statusLabel;
+    const subEl = document.getElementById("pd-subscription");
+    if(p.subscription_start){
+      subEl.innerHTML = `📅 الاشتراك: من ${p.subscription_start.slice(0,10)} لحد ${p.subscription_end.slice(0,10)}<br>${p.expired?'<span style="color:#dc2626;font-weight:700;">منتهي</span>':(p.days_left+' يوم متبقي')} ${p.active===false?'<br><span style="color:#dc2626;font-weight:700;">الاشتراك موقوف حاليًا من الإدارة</span>':''}`;
+    } else {
+      subEl.textContent = "لسه مفيش اشتراك فعّال — هيتفعّل بمجرد قبول حسابك أو تواصل مع الإدارة";
+    }
+    const bookings = await api("/api/providers/"+providerUser.id+"/bookings");
+    document.getElementById("pd-bookings").innerHTML = bookings.length ? bookings.map(b=>`
+      <div class="card" style="cursor:default;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div><div class="name">${b.seeker_name||"غير معروف"}</div><span class="muted">📞 ${b.seeker_phone||""}</span></div>
+          <span class="pill">${b.status}</span>
+        </div>
+      </div>`).join("") : '<div class="empty">لا توجد طلبات تواصل بعد</div>';
   }catch(e){ showToast(e.message); }
 }
 

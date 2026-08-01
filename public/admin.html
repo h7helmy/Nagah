@@ -32,14 +32,82 @@
     <button class="btn approve" onclick="load()">دخول</button>
   </div>
   <div class="tabs">
-    <button data-status="pending" class="active" onclick="setTab('pending')">قيد المراجعة</button>
-    <button data-status="approved" onclick="setTab('approved')">المعتمدون</button>
-    <button data-status="rejected" onclick="setTab('rejected')">مرفوضون</button>
+    <button data-mode="providers" class="active" onclick="setMode('providers')">المدرسون والمراكز</button>
+    <button data-mode="seekers" onclick="setMode('seekers')">أولياء الأمور والطلاب</button>
   </div>
-  <div id="list"></div>
+
+  <div id="providers-section">
+    <div class="tabs">
+      <button data-status="pending" class="active" onclick="setTab('pending')">قيد المراجعة</button>
+      <button data-status="approved" onclick="setTab('approved')">المعتمدون</button>
+      <button data-status="rejected" onclick="setTab('rejected')">مرفوضون</button>
+    </div>
+    <div id="list"></div>
+  </div>
+
+  <div id="seekers-section" style="display:none;">
+    <div class="tabs">
+      <button data-stype="" class="active" onclick="setSeekerType('')">الكل</button>
+      <button data-stype="parent" onclick="setSeekerType('parent')">أولياء الأمور</button>
+      <button data-stype="student" onclick="setSeekerType('student')">الطلاب</button>
+    </div>
+    <div id="seeker-list"></div>
+  </div>
 </div>
 <script>
 let currentStatus = "pending";
+let currentSeekerType = "";
+function setMode(mode){
+  document.querySelectorAll('[data-mode]').forEach(b=>b.classList.toggle("active", b.dataset.mode===mode));
+  document.getElementById("providers-section").style.display = mode==="providers" ? "block" : "none";
+  document.getElementById("seekers-section").style.display = mode==="seekers" ? "block" : "none";
+  if(mode==="seekers") loadSeekers();
+}
+function setSeekerType(t){
+  currentSeekerType = t;
+  document.querySelectorAll('[data-stype]').forEach(b=>b.classList.toggle("active", b.dataset.stype===t));
+  loadSeekers();
+}
+async function loadSeekers(){
+  const key = localStorage.getItem("nagah_admin_key") || document.getElementById("key").value;
+  const res = await fetch("/api/admin/seekers?type="+currentSeekerType, { headers: { "x-admin-key": key } });
+  const list = document.getElementById("seeker-list");
+  if(!res.ok){ list.innerHTML = '<div class="empty">مفتاح غير صحيح أو حصل خطأ</div>'; return; }
+  const rows = await res.json();
+  list.innerHTML = rows.length ? rows.map(s=>`
+    <div class="card">
+      <div class="row">
+        <div>
+          <div class="name">${s.name} <span class="tag">${s.type==='parent'?'👪 ولي أمر':'🎒 طالب'}</span> ${s.active===false?'<span class="tag" style="color:#dc2626;">(موقوف)</span>':''}</div>
+          <div style="font-size:13px; color:#6b7280;">📞 ${s.phone} | ${s.email||"بدون إيميل"} | 📍 ${s.country}${s.area?" - "+s.area:""}</div>
+          <div style="font-size:12px; color:#6b7280; margin-top:4px;">جنسية: ${s.nationality||"-"} | ميلاد: ${s.dob||"-"} ${s.type==='parent' ? ('| عدد الأطفال: '+s.children_count) : ""}</div>
+        </div>
+        <div style="display:flex; gap:6px; flex-wrap:wrap;">
+          ${s.active===false ? `<button class="btn activate" onclick="seekerAct(${s.id},'activate')">تفعيل</button>` : `<button class="btn suspend" onclick="seekerAct(${s.id},'suspend')">إيقاف</button>`}
+          <button class="btn reset" onclick="seekerResetPw(${s.id})">إعادة ضبط كلمة السر</button>
+          <button class="btn delete" onclick="seekerDel(${s.id})">حذف نهائي</button>
+        </div>
+      </div>
+    </div>`).join("") : '<div class="empty">لا يوجد حسابات</div>';
+}
+async function seekerAct(id, action){
+  const key = localStorage.getItem("nagah_admin_key") || document.getElementById("key").value;
+  await fetch(`/api/admin/seekers/${id}/${action}`, { method:"POST", headers: { "x-admin-key": key } });
+  loadSeekers();
+}
+async function seekerResetPw(id){
+  if(!confirm("هيتم توليد كلمة سر جديدة عشوائية لهذا الحساب. متأكد؟")) return;
+  const key = localStorage.getItem("nagah_admin_key") || document.getElementById("key").value;
+  const res = await fetch(`/api/admin/seekers/${id}/reset-password`, { method:"POST", headers: { "x-admin-key": key } });
+  const data = await res.json();
+  if(data.new_password){ alert("كلمة السر الجديدة: "+data.new_password); } else { alert("حصل خطأ: "+(data.error||"غير معروف")); }
+}
+async function seekerDel(id){
+  if(!confirm("متأكد إنك عايز تحذف هذا الحساب نهائيًا؟")) return;
+  const key = localStorage.getItem("nagah_admin_key") || document.getElementById("key").value;
+  await fetch(`/api/admin/seekers/${id}`, { method:"DELETE", headers: { "x-admin-key": key } });
+  loadSeekers();
+}
 function setTab(s){
   currentStatus = s;
   document.querySelectorAll(".tabs button").forEach(b=>b.classList.toggle("active", b.dataset.status===s));

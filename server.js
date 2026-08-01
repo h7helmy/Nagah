@@ -33,6 +33,10 @@ function stripPrivate(p) {
   const { password_hash, ...rest } = p;
   return { ...rest, ...subscriptionInfo(p) };
 }
+function stripPrivateSeeker(s) {
+  const { password_hash, ...rest } = s;
+  return { ...rest, active: s.active !== false };
+}
 function isLive(p) {
   const now = Date.now();
   const end = p.subscription_end ? new Date(p.subscription_end).getTime() : null;
@@ -152,6 +156,25 @@ app.post("/api/providers", (req, res) => {
   res.status(201).json({ id: p.id, status: "pending" });
 });
 
+// ---------- provider self dashboard ----------
+app.get("/api/providers/:id/me", (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const p = state.providers.find((x) => x.id === id);
+  if (!p) return res.status(404).json({ error: "غير موجود" });
+  res.json(stripPrivate(p));
+});
+app.get("/api/providers/:id/bookings", (req, res) => {
+  const provider_id = parseInt(req.params.id, 10);
+  const rows = state.bookings
+    .filter((b) => b.provider_id === provider_id)
+    .sort((a, b) => b.id - a.id)
+    .map((b) => {
+      const s = state.seekers.find((x) => x.id === b.seeker_id) || {};
+      return { id: b.id, status: b.status, created_at: b.created_at, seeker_name: s.name, seeker_phone: s.phone };
+    });
+  res.json(rows);
+});
+
 // ---------- reviews ----------
 app.post("/api/providers/:id/reviews", (req, res) => {
   const id = parseInt(req.params.id, 10);
@@ -171,12 +194,15 @@ app.post("/api/providers/:id/reviews", (req, res) => {
 
 // ---------- seekers (parent أو student) ----------
 app.post("/api/seekers", (req, res) => {
-  const { type, name, username, phone, email, country, area, nationality, dob, children_count } = req.body || {};
+  const { type, name, username, phone, email, country, area, nationality, dob, children_count, password } = req.body || {};
   if (!["parent", "student"].includes(type)) {
     return res.status(400).json({ error: "نوع الحساب لازم يكون ولي أمر أو طالب" });
   }
   if (!name || !phone || !country || !nationality || !dob) {
     return res.status(400).json({ error: "الاسم والهاتف والدولة والجنسية وتاريخ الميلاد مطلوبة" });
+  }
+  if (!password || String(password).length < 6) {
+    return res.status(400).json({ error: "كلمة السر مطلوبة ولازم تكون 6 حروف/أرقام على الأقل" });
   }
   if (state.seekers.some((s) => s.phone === phone)) {
     return res.status(409).json({ error: "رقم الهاتف ده مسجل بالفعل" });
@@ -191,11 +217,30 @@ app.post("/api/seekers", (req, res) => {
     id: state.nextIds.seeker++, type, name, username: username || "", phone,
     email: email || "", country, area: area || "", nationality, dob,
     children_count: type === "parent" ? (parseInt(children_count, 10) || 0) : 0,
+    password_hash: bcrypt.hashSync(String(password), 10),
+    active: true,
     created_at: new Date().toISOString(),
   };
   state.seekers.push(s);
   save();
-  res.status(201).json({ id: s.id, name: s.name, type: s.type });
+  res.status(201).json(stripPrivateSeeker(s));
+});
+
+// ---------- unified login (provider أو seeker) ----------
+app.post("/api/login", (req, res) => {
+  const { phone, password } = req.body || {};
+  if (!phone || !password) return res.status(400).json({ error: "رقم الهاتف وكلمة السر مطلوبان" });
+  const p = state.providers.find((x) => x.phone === phone);
+  if (p && bcrypt.compareSync(String(password), p.password_hash)) {
+    if (p.active === false) return res.status(403).json({ error: "الحساب موقوف حاليًا من الإدارة" });
+    return res.json({ kind: "provider", ...stripPrivate(p) });
+  }
+  const s = state.seekers.find((x) => x.phone === phone);
+  if (s && bcrypt.compareSync(String(password), s.password_hash)) {
+    if (s.active === false) return res.status(403).json({ error: "الحساب موقوف حاليًا من الإدارة" });
+    return res.json({ kind: "seeker", ...stripPrivateSeeker(s) });
+  }
+  res.status(401).json({ error: "رقم الهاتف أو كلمة السر غلط" });
 });
 
 // ---------- favorites ----------
@@ -328,6 +373,43 @@ app.delete("/api/admin/providers/:id", requireAdmin, (req, res) => {
   state.reviews = state.reviews.filter((r) => r.provider_id !== id);
   state.bookings = state.bookings.filter((b) => b.provider_id !== id);
   state.favorites = state.favorites.filter((f) => f.provider_id !== id);
+  save();
+  res.json({ ok: true });
+});
+
+// ---------- admin: seekers (أولياء الأمور والطلاب) ----------
+app.get("/api/admin/seekers", requireAdmin, (req, res) => {
+  const type = req.query.type || "";
+  let rows = state.seekers.slice().sort((a, b) => b.id - a.id);
+  if (type) rows = rows.filter((s) => s.type === type);
+  res.json(rows.map(stripPrivateSeeker));
+});
+app.post("/api/admin/seekers/:id/suspend", requireAdmin, (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const s = state.seekers.find((x) => x.id === id);
+  if (s) { s.active = false; save(); }
+  res.json({ ok: true });
+});
+app.post("/api/admin/seekers/:id/activate", requireAdmin, (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const s = state.seekers.find((x) => x.id === id);
+  if (s) { s.active = true; save(); }
+  res.json({ ok: true });
+});
+app.post("/api/admin/seekers/:id/reset-password", requireAdmin, (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const s = state.seekers.find((x) => x.id === id);
+  if (!s) return res.status(404).json({ error: "غير موجود" });
+  const newPassword = crypto.randomBytes(4).toString("hex");
+  s.password_hash = bcrypt.hashSync(newPassword, 10);
+  save();
+  res.json({ ok: true, new_password: newPassword });
+});
+app.delete("/api/admin/seekers/:id", requireAdmin, (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  state.seekers = state.seekers.filter((x) => x.id !== id);
+  state.bookings = state.bookings.filter((b) => b.seeker_id !== id);
+  state.favorites = state.favorites.filter((f) => f.seeker_id !== id);
   save();
   res.json({ ok: true });
 });
