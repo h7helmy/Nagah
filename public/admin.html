@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>لوحة الإدارة | دَرِّسْني</title>
+<style>
+  body{font-family:'Segoe UI',Tahoma,Arial,sans-serif; background:#f7f8fb; margin:0; padding:20px; color:#1f2430;}
+  .container{max-width:800px; margin:0 auto;}
+  h1{font-size:20px; margin-bottom:6px;}
+  .muted{color:#6b7280; font-size:13px; margin-bottom:16px;}
+  .card{background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:14px; margin-bottom:12px;}
+  .row{display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;}
+  .btn{cursor:pointer; border:none; border-radius:8px; padding:8px 14px; font-size:13px; font-weight:600;}
+  .approve{background:#16a34a; color:#fff;} .reject{background:#dc2626; color:#fff;}
+  input{padding:8px 10px; border:1px solid #e5e7eb; border-radius:8px; font-size:13px;}
+  .empty{text-align:center; color:#6b7280; padding:30px;}
+  .name{font-weight:700;} .tag{color:#2563eb; font-size:12px;}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>لوحة إدارة المدرسين — مراجعة الحسابات الجديدة</h1>
+  <p class="muted">أدخل مفتاح الإدارة (Admin Key) لعرض الطلبات المعلّقة</p>
+  <div class="card row">
+    <input id="key" type="password" placeholder="Admin Key" style="flex:1;">
+    <button class="btn approve" onclick="load()">دخول</button>
+  </div>
+  <div id="list"></div>
+</div>
+<script>
+async function load(){
+  const key = document.getElementById("key").value;
+  localStorage.setItem("darrisni_admin_key", key);
+  const res = await fetch("/api/admin/tutors?status=pending", { headers: { "x-admin-key": key } });
+  const list = document.getElementById("list");
+  if(!res.ok){ list.innerHTML = '<div class="empty">مفتاح غير صحيح أو حصل خطأ</div>'; return; }
+  const rows = await res.json();
+  list.innerHTML = rows.length ? rows.map(t=>`
+    <div class="card">
+      <div class="row">
+        <div>
+          <div class="name">${t.name} <span class="tag">${t.subject} - ${t.stage||""}</span></div>
+          <div style="font-size:13px; color:#6b7280;">📍 ${t.area} | ${t.price} ج.م | 📞 ${t.phone}</div>
+          <div style="font-size:12px; color:#6b7280; margin-top:4px;">${t.bio||""}</div>
+        </div>
+        <div style="display:flex; gap:6px;">
+          <button class="btn approve" onclick="act(${t.id},'approve')">قبول</button>
+          <button class="btn reject" onclick="act(${t.id},'reject')">رفض</button>
+        </div>
+      </div>
+    </div>`).join("") : '<div class="empty">لا توجد طلبات معلّقة حاليًا 🎉</div>';
+}
+async function act(id, action){
+  const key = localStorage.getItem("darrisni_admin_key") || document.getElementById("key").value;
+  await fetch(`/api/admin/tutors/${id}/${action}`, { method:"POST", headers: { "x-admin-key": key } });
+  load();
+}
+const saved = localStorage.getItem("darrisni_admin_key");
+if(saved){ document.getElementById("key").value = saved; load(); }
+</script>
+</body>
+</html>

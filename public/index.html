@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>دَرِّسْني | منصة المدرسين الخصوصيين</title>
+<style>
+  :root{
+    --primary:#2563eb; --primary-dark:#1d4ed8; --accent:#f59e0b;
+    --bg:#f7f8fb; --card:#ffffff; --text:#1f2430; --muted:#6b7280;
+    --border:#e5e7eb; --success:#16a34a; --radius:14px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:'Segoe UI', Tahoma, Arial, sans-serif; background:var(--bg); color:var(--text); padding-bottom:70px;}
+  header.top{background:linear-gradient(135deg,var(--primary),var(--primary-dark)); color:#fff; padding:18px 16px 60px;}
+  header.top h1{font-size:22px; display:flex; align-items:center; gap:8px;}
+  header.top p{font-size:13px; opacity:.9; margin-top:4px;}
+  .container{max-width:960px; margin:0 auto; padding:0 14px;}
+  .search-card{background:var(--card); border-radius:var(--radius); box-shadow:0 8px 24px rgba(0,0,0,.12); margin-top:-42px; padding:16px; position:relative; z-index:5;}
+  .search-big{width:100%; padding:14px 16px; border:1px solid var(--border); border-radius:12px; font-size:15px; background:#fafafa; color:var(--text);}
+  .chips{display:flex; gap:6px; flex-wrap:wrap; margin-top:10px;}
+  .chip{background:#eef2ff; color:var(--primary); border:none; padding:6px 12px; border-radius:20px; font-size:12px; cursor:pointer;}
+  input, textarea{width:100%; padding:9px 10px; border:1px solid var(--border); border-radius:10px; font-size:13px; background:#fafafa; color:var(--text); font-family:inherit;}
+  .btn{cursor:pointer; border:none; border-radius:10px; padding:10px 16px; font-size:14px; font-weight:600;}
+  .btn-primary{background:var(--primary); color:#fff;}
+  .btn-outline{background:#fff; border:1px solid var(--primary); color:var(--primary);}
+  .btn-block{width:100%;}
+  .section{margin-top:22px;}
+  .section h2{font-size:17px; margin-bottom:10px;}
+  .muted{color:var(--muted); font-size:13px;}
+  .grid{display:grid; grid-template-columns:1fr; gap:12px;}
+  @media(min-width:640px){.grid{grid-template-columns:1fr 1fr;}}
+  @media(min-width:900px){.grid{grid-template-columns:1fr 1fr 1fr;}}
+  .card{background:var(--card); border-radius:var(--radius); box-shadow:0 2px 10px rgba(0,0,0,.06); padding:14px; border:1px solid var(--border); cursor:pointer;}
+  .card-top{display:flex; gap:10px; align-items:center;}
+  .avatar{width:52px; height:52px; border-radius:50%; background:var(--primary); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:18px; flex-shrink:0;}
+  .name{font-weight:700; font-size:15px;}
+  .tag{display:inline-block; background:#eef2ff; color:var(--primary); font-size:11px; padding:2px 8px; border-radius:20px; margin-top:4px;}
+  .verified{display:inline-flex; background:#ecfdf3; color:var(--success); font-size:11px; padding:2px 8px; border-radius:20px; margin-inline-start:4px;}
+  .stars{color:var(--accent); font-size:13px; margin-top:6px;}
+  .price{font-weight:700; color:var(--primary-dark); font-size:14px;}
+  .card-footer{display:flex; justify-content:space-between; align-items:center; margin-top:10px; font-size:12px; color:var(--muted);}
+  .badge-region{background:#fff7ed; color:#c2410c; padding:2px 8px; border-radius:20px; font-size:11px;}
+  .cta-row{margin-top:10px;} .cta-row .btn{width:100%;}
+  .modal-overlay{position:fixed; inset:0; background:rgba(0,0,0,.5); display:none; align-items:flex-end; justify-content:center; z-index:50;}
+  .modal-overlay.open{display:flex;}
+  .modal{background:#fff; width:100%; max-width:640px; max-height:88vh; overflow-y:auto; border-radius:20px 20px 0 0; padding:20px; position:relative;}
+  @media(min-width:640px){.modal-overlay{align-items:center;} .modal{border-radius:16px;}}
+  .modal-close{position:absolute; top:14px; left:14px; background:#f3f4f6; border:none; width:30px; height:30px; border-radius:50%; font-size:16px; cursor:pointer;}
+  .review{border-top:1px solid var(--border); padding:10px 0;}
+  .review .who{font-weight:600; font-size:13px;}
+  .contact-box{background:#f0fdf4; border:1px dashed var(--success); border-radius:10px; padding:12px; margin-top:10px; text-align:center;}
+  .contact-hidden{background:#f9fafb; border-radius:10px; padding:14px; margin-top:10px; text-align:center; color:var(--muted); font-size:13px;}
+  .stars-input{font-size:30px; letter-spacing:6px; cursor:pointer; margin:8px 0; text-align:center;}
+  .stars-input span{color:#d1d5db;} .stars-input span.active{color:var(--accent);}
+  form .field{margin-bottom:10px;}
+  form label{display:block; font-size:12px; color:var(--muted); margin-bottom:4px;}
+  nav.bottom{position:fixed; bottom:0; right:0; left:0; background:#fff; border-top:1px solid var(--border); display:flex; z-index:40;}
+  nav.bottom button{flex:1; background:none; border:none; padding:10px 4px; font-size:11px; color:var(--muted); cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:3px;}
+  nav.bottom button.active{color:var(--primary); font-weight:700;}
+  nav.bottom button .ic{font-size:18px;}
+  .pill{display:inline-block; padding:2px 8px; border-radius:20px; font-size:11px; font-weight:600; background:#fef3c7; color:#92400e;}
+  .empty{text-align:center; color:var(--muted); padding:30px 10px; font-size:13px;}
+  .toast{position:fixed; top:14px; left:50%; transform:translateX(-50%); background:#111827; color:#fff; padding:10px 18px; border-radius:10px; font-size:13px; z-index:80; display:none;}
+  .fav-btn{background:none; border:none; font-size:18px; cursor:pointer;}
+  .free-banner{background:#fffbeb; border:1px solid #fde68a; border-radius:10px; padding:10px 12px; font-size:12.5px; color:#92400e; margin-top:10px; text-align:center; font-weight:600;}
+  .view{display:none;} .view.active{display:block;}
+  .center-title{text-align:center; margin-bottom:14px;}
+  .center-title h2{font-size:18px;} .center-title p{font-size:13px; color:var(--muted); margin-top:4px;}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="container">
+    <h1>📚 دَرِّسْني</h1>
+    <p>دور على مدرسك في ثانية واحدة — من غير خطوات معقدة</p>
+  </div>
+</header>
+
+<div class="container">
+  <div id="view-search" class="view active">
+    <div class="search-card">
+      <input class="search-big" id="q" placeholder="🔎 اكتب المادة أو المرحلة أو المنطقة...">
+      <div class="chips" id="chips"></div>
+    </div>
+    <div class="free-banner">🎉 السنة الأولى مجانًا بالكامل لكل المدرسين وأولياء الأمور — بدون أي عمولة</div>
+    <div class="section">
+      <h2>المدرسون والمدرسات <span class="muted" id="result-count"></span></h2>
+      <div class="grid" id="tutor-grid"></div>
+    </div>
+  </div>
+
+  <div id="view-tutor-reg" class="view">
+    <div class="center-title"><h2>تسجيل كمدرس / مدرسة</h2><p>خطوة واحدة بس — البيانات تتراجع من فريقنا خلال 24-48 ساعة</p></div>
+    <form id="tutor-form" class="card">
+      <div class="field"><label>الاسم الكامل</label><input required id="t-name" placeholder="مثال: أ. محمد السيد"></div>
+      <div class="field"><label>المادة</label><input required id="t-subject-new" placeholder="مثال: رياضيات"></div>
+      <div class="field"><label>المرحلة الدراسية</label><input id="t-stage-new" placeholder="مثال: ثانوي"></div>
+      <div class="field"><label>المنطقة</label><input required id="t-area-new" placeholder="مثال: مدينة نصر"></div>
+      <div class="field"><label>سعر الحصة (جنيه)</label><input required type="number" id="t-price" placeholder="150"></div>
+      <div class="field"><label>نبذة مختصرة (اختياري)</label><textarea id="t-bio" rows="2"></textarea></div>
+      <div class="field"><label>رقم الهاتف/واتساب</label><input required id="t-phone" placeholder="01xxxxxxxxx"></div>
+      <button class="btn btn-primary btn-block" type="submit">إرسال للمراجعة</button>
+    </form>
+    <div class="free-banner">💰 مجاني تمامًا في السنة الأولى — بدون أي عمولة أو رسوم اشتراك</div>
+  </div>
+
+  <div id="view-parent-reg" class="view">
+    <div class="center-title"><h2>تسجيل ولي أمر</h2><p>3 حقول بس، وتقدر تشوف بيانات تواصل أي مدرس فورًا</p></div>
+    <form id="parent-form" class="card">
+      <div class="field"><label>الاسم</label><input required id="p-name" placeholder="مثال: سارة أحمد"></div>
+      <div class="field"><label>رقم الهاتف</label><input required id="p-phone" placeholder="01xxxxxxxxx"></div>
+      <div class="field"><label>المنطقة</label><input id="p-area" placeholder="مثال: مدينة نصر"></div>
+      <button class="btn btn-primary btn-block" type="submit">إنشاء الحساب</button>
+    </form>
+  </div>
+
+  <div id="view-dashboard" class="view">
+    <div class="center-title"><h2 id="dash-title">لوحة ولي الأمر</h2><p>المدرسون المفضلون وطلبات الحجز</p></div>
+    <div class="section"><h2>⭐ المفضلة</h2><div class="grid" id="fav-grid"></div></div>
+    <div class="section"><h2>📩 طلبات التواصل / الحجوزات</h2><div id="booking-list"></div></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-overlay"><div class="modal" id="modal-content"></div></div>
+<div class="toast" id="toast"></div>
+
+<nav class="bottom">
+  <button data-view="view-search" class="active"><span class="ic">🔎</span>بحث</button>
+  <button data-view="view-tutor-reg"><span class="ic">🧑‍🏫</span>تسجيل مدرس</button>
+  <button data-view="view-parent-reg"><span class="ic">👪</span>تسجيل ولي أمر</button>
+  <button data-view="view-dashboard"><span class="ic">📋</span>لوحتي</button>
+</nav>
+
+<script>
+let currentUser = JSON.parse(localStorage.getItem("darrisni_parent") || "null");
+let lastTutors = [];
+
+async function api(path, opts={}) {
+  const res = await fetch(path, { headers: {"Content-Type":"application/json"}, ...opts });
+  const data = await res.json().catch(()=>({}));
+  if (!res.ok) throw new Error(data.error || "حصل خطأ");
+  return data;
+}
+function starString(r){ const full=Math.round(r||0); return "★".repeat(full)+"☆".repeat(5-full)+" ("+(r||0).toFixed(1)+")"; }
+function initials(name){ const parts=name.trim().split(" "); return parts[parts.length-1].charAt(0); }
+
+document.querySelectorAll("nav.bottom button").forEach(btn=>{
+  btn.addEventListener("click",()=>{
+    document.querySelectorAll("nav.bottom button").forEach(b=>b.classList.remove("active"));
+    document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));
+    btn.classList.add("active");
+    document.getElementById(btn.dataset.view).classList.add("active");
+    if(btn.dataset.view==="view-dashboard") renderDashboard();
+  });
+});
+
+async function renderGrid(){
+  const q = document.getElementById("q").value.trim();
+  try{
+    const rows = await api("/api/tutors?q="+encodeURIComponent(q));
+    lastTutors = rows;
+    document.getElementById("result-count").textContent = "("+rows.length+")";
+    const grid = document.getElementById("tutor-grid");
+    if(rows.length===0){ grid.innerHTML='<div class="empty">لا توجد نتائج — جرّب كلمة تانية زي اسم المادة أو المنطقة</div>'; return; }
+    grid.innerHTML = rows.map(t=>`
+      <div class="card" onclick="openProfile(${t.id})">
+        <div class="card-top">
+          <div class="avatar">${initials(t.name)}</div>
+          <div><div class="name">${t.name}</div><span class="tag">${t.subject}</span> <span class="tag">${t.stage||""}</span></div>
+        </div>
+        <div class="stars">${starString(t.rating)}</div>
+        <div class="card-footer"><span class="badge-region">📍 ${t.area}</span><span class="price">${t.price} ج.م / حصة</span></div>
+        <div class="cta-row"><button class="btn btn-primary">عرض الملف والتواصل</button></div>
+      </div>`).join("");
+  }catch(e){ showToast(e.message); }
+}
+document.getElementById("q").addEventListener("input", debounce(renderGrid, 250));
+function debounce(fn, ms){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms); }; }
+
+const subjectsChips = ["رياضيات","لغة إنجليزية","فيزياء","كيمياء","لغة عربية"];
+document.getElementById("chips").innerHTML = subjectsChips.map(s=>`<button class="chip" onclick="document.getElementById('q').value='${s}'; renderGrid();">${s}</button>`).join("");
+
+async function openProfile(id){
+  try{
+    const url = "/api/tutors/"+id+(currentUser?("?parent_id="+currentUser.id):"");
+    const t = await api(url);
+    const contactBlock = t.phone
+      ? `<div class="contact-box"><strong>📞 ${t.phone}</strong><div class="muted" style="margin-top:4px;">تواصل مباشرة لتنسيق موعد الحصة</div></div>`
+      : `<div class="contact-hidden">🔒 سجّل كولي أمر (3 حقول بس) لعرض رقم التواصل</div>`;
+    const reviewsHtml = t.reviews.length
+      ? t.reviews.map(r=>`<div class="review"><div class="who">${r.parent_name} — ${"★".repeat(r.rating)}</div><div class="muted">${r.text}</div></div>`).join("")
+      : `<p class="muted" style="padding:8px 0;">لا توجد تقييمات بعد — كن أول من يقيّم</p>`;
+    document.getElementById("modal-content").innerHTML = `
+      <button class="modal-close" onclick="closeModal()">✕</button>
+      <div class="card-top">
+        <div class="avatar" style="width:64px;height:64px;font-size:22px;">${initials(t.name)}</div>
+        <div><div class="name" style="font-size:17px;">${t.name}</div>
+        <span class="tag">${t.subject}</span> <span class="tag">${t.stage||""}</span> <span class="badge-region">📍 ${t.area}</span></div>
+      </div>
+      <div class="stars" style="margin-top:10px;">${starString(t.rating)} — ${t.reviewCount} تقييم</div>
+      <p style="margin-top:10px; font-size:14px; line-height:1.6;">${t.bio||""}</p>
+      <p class="price" style="margin-top:6px;">${t.price} جنيه / الحصة</p>
+      ${contactBlock}
+      <div style="display:flex; gap:8px; margin-top:12px;">
+        <button class="btn btn-primary" style="flex:1;" onclick="requestBooking(${t.id})">طلب حجز حصة</button>
+        <button class="fav-btn" onclick="toggleFav(${t.id})" title="إضافة للمفضلة">🤍</button>
+      </div>
+      <div class="section"><h2 style="font-size:15px;">التقييمات</h2>${reviewsHtml}</div>
+      <div class="section">
+        <h2 style="font-size:15px;">قيّم المدرس بلمسة واحدة</h2>
+        <div class="stars-input" id="star-input">${[1,2,3,4,5].map(n=>`<span data-n="${n}" onclick="rateNow(${t.id},${n})">★</span>`).join("")}</div>
+      </div>`;
+    document.getElementById("modal-overlay").classList.add("open");
+  }catch(e){ showToast(e.message); }
+}
+function closeModal(){ document.getElementById("modal-overlay").classList.remove("open"); renderGrid(); }
+document.getElementById("modal-overlay").addEventListener("click", e=>{ if(e.target.id==="modal-overlay") closeModal(); });
+
+async function rateNow(tid, n){
+  try{
+    await api("/api/tutors/"+tid+"/reviews", { method:"POST", body: JSON.stringify({
+      parent_name: currentUser ? currentUser.name+" (ولي أمر)" : "ولي أمر", rating:n, text:"(تقييم سريع)"
+    })});
+    showToast("تم إرسال تقييمك، شكرًا لك! ⭐");
+    openProfile(tid);
+  }catch(e){ showToast(e.message); }
+}
+async function toggleFav(id){
+  if(!currentUser){ showToast("سجّل كولي أمر أولًا"); return; }
+  try{ await api("/api/parents/"+currentUser.id+"/favorites/"+id, { method:"POST" }); showToast("تمت الإضافة للمفضلة"); }
+  catch(e){ showToast(e.message); }
+}
+async function requestBooking(id){
+  if(!currentUser){ showToast("سجّل كولي أمر أولًا (3 حقول بس) لطلب الحجز"); return; }
+  try{
+    await api("/api/bookings", { method:"POST", body: JSON.stringify({ tutor_id:id, parent_id: currentUser.id }) });
+    showToast("تم إرسال طلب الحجز");
+    closeModal();
+  }catch(e){ showToast(e.message); }
+}
+
+document.getElementById("tutor-form").addEventListener("submit", async e=>{
+  e.preventDefault();
+  try{
+    await api("/api/tutors", { method:"POST", body: JSON.stringify({
+      name: t("t-name"), subject: t("t-subject-new"), stage: t("t-stage-new"),
+      area: t("t-area-new"), price: parseFloat(t("t-price"))||0, bio: t("t-bio"), phone: t("t-phone")
+    })});
+    showToast("تم إرسال طلب التسجيل! هنراجع بياناتك خلال 24-48 ساعة");
+    e.target.reset();
+  }catch(err){ showToast(err.message); }
+});
+function t(id){ return document.getElementById(id).value; }
+
+document.getElementById("parent-form").addEventListener("submit", async e=>{
+  e.preventDefault();
+  try{
+    const p = await api("/api/parents", { method:"POST", body: JSON.stringify({ name: t("p-name"), phone: t("p-phone"), area: t("p-area") }) });
+    currentUser = p;
+    localStorage.setItem("darrisni_parent", JSON.stringify(p));
+    showToast("أهلًا "+p.name+"! دلوقتي تقدر تشوف بيانات تواصل المدرسين مباشرة.");
+    e.target.reset();
+    document.querySelector('[data-view="view-search"]').click();
+  }catch(err){ showToast(err.message); }
+});
+
+async function renderDashboard(){
+  document.getElementById("dash-title").textContent = currentUser ? "أهلًا "+currentUser.name : "لوحة ولي الأمر";
+  const favGrid = document.getElementById("fav-grid");
+  const list = document.getElementById("booking-list");
+  if(!currentUser){
+    favGrid.innerHTML = '<div class="empty">سجّل كولي أمر الأول عشان تشوف لوحتك</div>';
+    list.innerHTML = "";
+    return;
+  }
+  try{
+    const favs = await api("/api/parents/"+currentUser.id+"/favorites");
+    favGrid.innerHTML = favs.length ? favs.map(t=>`
+      <div class="card" onclick="openProfile(${t.id})">
+        <div class="card-top"><div class="avatar">${initials(t.name)}</div><div><div class="name">${t.name}</div><span class="tag">${t.subject}</span></div></div>
+        <div class="stars">${starString(t.rating)}</div>
+      </div>`).join("") : '<div class="empty">لا يوجد مدرسون في المفضلة بعد</div>';
+
+    const bookings = await api("/api/parents/"+currentUser.id+"/bookings");
+    list.innerHTML = bookings.length ? bookings.map(b=>`
+      <div class="card" style="cursor:default;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div><div class="name">${b.tutor_name}</div><span class="muted">${b.subject} — ${b.price} ج.م</span></div>
+          <span class="pill">${b.status}</span>
+        </div>
+        <div class="free-banner" style="margin-top:8px;">بدون عمولة على هذا الحجز (عرض السنة الأولى)</div>
+      </div>`).join("") : '<div class="empty">لا توجد طلبات حجز بعد — ابحث عن مدرس وابدأ التواصل</div>';
+  }catch(e){ showToast(e.message); }
+}
+
+function showToast(msg){
+  const el=document.getElementById("toast");
+  el.textContent=msg; el.style.display="block";
+  clearTimeout(window._t); window._t=setTimeout(()=>{el.style.display="none";},3200);
+}
+
+renderGrid();
+</script>
+</body>
+</html>
