@@ -167,6 +167,15 @@ app.post("/api/admin/tutors/:id/reject", requireAdmin, (req, res) => {
   if (t) { t.status = "rejected"; save(); }
   res.json({ ok: true });
 });
+app.delete("/api/admin/tutors/:id", requireAdmin, (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  state.tutors = state.tutors.filter((x) => x.id !== id);
+  state.reviews = state.reviews.filter((r) => r.tutor_id !== id);
+  state.bookings = state.bookings.filter((b) => b.tutor_id !== id);
+  state.favorites = state.favorites.filter((f) => f.tutor_id !== id);
+  save();
+  res.json({ ok: true });
+});
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`darrisni platform running on port ${PORT}`));

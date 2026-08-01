@@ -1,7 +1,7 @@
 {
-  "name": "darrisni-platform",
+  "name": "nagah-platform",
   "version": "1.0.0",
-  "description": "منصة درسني - ربط المدرسين الخصوصيين بأولياء الأمور",
+  "description": "منصة نجاح - ربط المدرسين الخصوصيين بأولياء الأمور",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
