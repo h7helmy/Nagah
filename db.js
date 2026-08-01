@@ -21,6 +21,10 @@ let state;
 if (fs.existsSync(DATA_PATH)) {
   try {
     state = JSON.parse(fs.readFileSync(DATA_PATH, "utf8"));
+    // لو الملف موجود بس بشكل قديم (schema مختلف من نسخة سابقة) - نبدأ بيانات نضيفة بدل ما السيرفر يقع
+    if (!Array.isArray(state.providers) || !Array.isArray(state.seekers)) {
+      state = seedData();
+    }
   } catch (e) {
     state = seedData();
   }
