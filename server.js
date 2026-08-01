@@ -3,6 +3,7 @@ const path = require("path");
 const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
 const { state, save } = require("./db");
+const { sendMail } = require("./mailer");
 
 const app = express();
 app.use(express.json());
@@ -267,6 +268,28 @@ app.post("/api/login", (req, res) => {
     return res.json({ kind: "seeker", ...stripPrivateSeeker(s) });
   }
   res.status(401).json({ error: "رقم الهاتف أو كلمة السر غلط" });
+});
+
+// نسيت كلمة السر: بعتلك كلمة سر جديدة على الإيميل المسجل (لو موجود) - نفس الرد دايمًا عشان محدش يعرف مين مسجل
+app.post("/api/forgot-password", async (req, res) => {
+  const generic = { ok: true, message: "لو رقم الهاتف ده مسجل وعنده إيميل، هيوصله كلمة سر جديدة على الإيميل خلال دقايق" };
+  const { phone } = req.body || {};
+  if (!phone) return res.json(generic);
+  const account = state.providers.find((x) => x.phone === phone) || state.seekers.find((x) => x.phone === phone);
+  if (!account || !account.email) return res.json(generic);
+  const newPassword = crypto.randomBytes(4).toString("hex");
+  account.password_hash = bcrypt.hashSync(newPassword, 10);
+  save();
+  try {
+    await sendMail({
+      to: account.email,
+      subject: "كلمة السر الجديدة - منصة نجاح",
+      text: `أهلًا ${account.name}،\n\nطلبت استرجاع كلمة السر لحسابك على منصة نجاح.\nكلمة السر الجديدة هي: ${newPassword}\n\nتقدر تسجّل دخولك بيها دلوقتي.\n\nمنصة نجاح`,
+    });
+  } catch (e) {
+    console.error("فشل إرسال إيميل استرجاع كلمة السر:", e.message);
+  }
+  res.json(generic);
 });
 
 // ---------- favorites ----------

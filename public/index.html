@@ -231,6 +231,7 @@
         <div class="field"><label>رقم الهاتف</label><input required id="pl-phone"></div>
         <div class="field"><label>كلمة السر</label><input required type="password" id="pl-password"></div>
         <button class="btn btn-primary btn-block" type="submit">دخول</button>
+        <button type="button" onclick="forgotPassword()" style="background:none; border:none; color:var(--primary); font-size:12.5px; margin-top:8px; cursor:pointer; width:100%;">نسيت كلمة السر؟</button>
       </form>
     </div>
     <div id="provider-dashboard-box" style="display:none;">
@@ -570,6 +571,14 @@ document.getElementById("provider-login-form").addEventListener("submit", async 
     renderAccountView();
   }catch(err){ showToast(err.message); }
 });
+async function forgotPassword(){
+  const phone = document.getElementById("pl-phone").value || prompt("اكتب رقم الهاتف المسجل به حسابك:");
+  if(!phone) return;
+  try{
+    const res = await api("/api/forgot-password", { method:"POST", body: JSON.stringify({ phone }) });
+    showToast(res.message);
+  }catch(e){ showToast(e.message); }
+}
 function providerLogout(){
   providerUser = null;
   localStorage.removeItem("nagah_provider");
