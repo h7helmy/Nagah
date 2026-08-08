@@ -148,6 +148,7 @@
         <div class="field"><label>اسم المستخدم</label><input id="pr-username"></div>
         <div class="field"><label>رقم الهاتف/واتساب</label><input required id="pr-phone" placeholder="01xxxxxxxxx"></div>
       </div>
+      <div class="field"><label id="pr-nid-label">الرقم القومي/المدني</label><input required id="pr-nid" placeholder="رقم الهوية الوطنية"></div>
       <div class="field-row">
         <div class="field"><label>البريد الإلكتروني</label><input required type="email" id="pr-email"></div>
         <div class="field"><label>الجنسية</label><input required id="pr-nat"></div>
@@ -209,6 +210,7 @@
 
     <form id="seeker-form" class="card" style="display:none;">
       <div class="field"><label>الاسم</label><input required id="sk-name"></div>
+      <div class="field"><label>الرقم القومي/المدني</label><input required id="sk-nid" placeholder="رقم الهوية الوطنية"></div>
       <div class="field-row">
         <div class="field"><label>اسم المستخدم</label><input id="sk-username"></div>
         <div class="field"><label>رقم الهاتف</label><input required id="sk-phone" placeholder="01xxxxxxxxx"></div>
@@ -372,6 +374,7 @@ function pickRole(role){
     providerForm.dataset.type = role;
     document.getElementById("provider-name-label").textContent = role==="center" ? "اسم المركز التعليمي" : "اسم المدرس/المدرسة";
     document.getElementById("pr-degree-label").textContent = role==="center" ? "الترخيص/الاعتماد (اختياري)" : "الدرجة العلمية";
+    document.getElementById("pr-nid-label").textContent = role==="center" ? "الرقم القومي للمسؤول / السجل التجاري" : "الرقم القومي/المدني";
     const genderField = document.getElementById("pr-gender-field");
     genderField.style.display = role==="tutor" ? "block" : "none";
     document.getElementById("pr-gender").required = role==="tutor";
@@ -528,7 +531,7 @@ document.getElementById("provider-form").addEventListener("submit", async e=>{
   try{
     await api("/api/providers", { method:"POST", body: JSON.stringify({
       type, gender: type==="tutor" ? v("pr-gender") : "",
-      name: v("pr-name"), username: v("pr-username"), phone: v("pr-phone"), email: v("pr-email"),
+      name: v("pr-name"), username: v("pr-username"), phone: v("pr-phone"), email: v("pr-email"), national_id: v("pr-nid"),
       nationality: v("pr-nat"), dob: v("pr-dob"), country: v("pr-country"), area: v("pr-area"),
       stage: v("pr-stage"), subject: v("pr-subject"), degree: v("pr-degree"), experience_years: v("pr-exp"),
       mode: v("pr-mode"), group_type: v("pr-group"), max_students: v("pr-maxstudents"),
@@ -547,7 +550,7 @@ document.getElementById("seeker-form").addEventListener("submit", async e=>{
   const type = e.target.dataset.type || "parent";
   try{
     const s = await api("/api/seekers", { method:"POST", body: JSON.stringify({
-      type, name: v("sk-name"), username: v("sk-username"), phone: v("sk-phone"), email: v("sk-email"),
+      type, name: v("sk-name"), username: v("sk-username"), phone: v("sk-phone"), email: v("sk-email"), national_id: v("sk-nid"),
       nationality: v("sk-nat"), dob: v("sk-dob"), country: v("sk-country"), area: v("sk-area"),
       children_count: v("sk-children"), password: v("sk-password"),
     })});

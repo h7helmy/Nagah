@@ -13,6 +13,37 @@ const ADMIN_KEY = process.env.ADMIN_KEY || "admin123";
 const FREE_SUBSCRIPTION_DAYS = 365;
 const FREE_TUTOR_LIMIT = 100; // أول 100 معلم/معلمة بياخدوا سنة مجانية أوتوماتيك
 
+// فحص تكرار البيانات على مستوى المنصة كلها (مدرسين + مراكز + أولياء أمور + طلاب) مش بس داخل نفس النوع
+function phoneTaken(phone, excludeId, excludeKind) {
+  return (
+    state.providers.some((p) => p.phone === phone && !(excludeKind === "provider" && p.id === excludeId)) ||
+    state.seekers.some((s) => s.phone === phone && !(excludeKind === "seeker" && s.id === excludeId))
+  );
+}
+function emailTaken(email, excludeId, excludeKind) {
+  if (!email) return false;
+  const e = String(email).toLowerCase();
+  return (
+    state.providers.some((p) => p.email && p.email.toLowerCase() === e && !(excludeKind === "provider" && p.id === excludeId)) ||
+    state.seekers.some((s) => s.email && s.email.toLowerCase() === e && !(excludeKind === "seeker" && s.id === excludeId))
+  );
+}
+function nationalIdTaken(nid, excludeId, excludeKind) {
+  if (!nid) return false;
+  return (
+    state.providers.some((p) => p.national_id && p.national_id === nid && !(excludeKind === "provider" && p.id === excludeId)) ||
+    state.seekers.some((s) => s.national_id && s.national_id === nid && !(excludeKind === "seeker" && s.id === excludeId))
+  );
+}
+function usernameTaken(username, excludeId, excludeKind) {
+  if (!username) return false;
+  const u = String(username).toLowerCase();
+  return (
+    state.providers.some((p) => p.username && p.username.toLowerCase() === u && !(excludeKind === "provider" && p.id === excludeId)) ||
+    state.seekers.some((s) => s.username && s.username.toLowerCase() === u && !(excludeKind === "seeker" && s.id === excludeId))
+  );
+}
+
 // إنشاء حساب سوبر أدمن افتراضي أول مرة (لو مفيش حساب سوبر أدمن محفوظ خالص)
 if (state.admins.length === 0) {
   const seedUsername = process.env.SUPER_ADMIN_USERNAME || "01030422228";
@@ -44,11 +75,11 @@ function subscriptionInfo(p) {
   };
 }
 function stripPrivate(p) {
-  const { password_hash, ...rest } = p;
+  const { password_hash, national_id, ...rest } = p;
   return { ...rest, ...subscriptionInfo(p) };
 }
 function stripPrivateSeeker(s) {
-  const { password_hash, ...rest } = s;
+  const { password_hash, national_id, ...rest } = s;
   return { ...rest, active: s.active !== false };
 }
 function isLive(p) {
@@ -124,7 +155,7 @@ app.get("/api/providers/:id", (req, res) => {
 // ---------- provider registration (tutor أو center) - pending review ----------
 app.post("/api/providers", (req, res) => {
   const {
-    type, gender, name, username, phone, email, country, area, nationality, dob,
+    type, gender, name, username, phone, email, national_id, country, area, nationality, dob,
     stage, subject, degree, experience_years, mode, group_type, max_students,
     price, payment_method, bio, availability_days, availability_from, availability_to,
     password,
@@ -136,19 +167,22 @@ app.post("/api/providers", (req, res) => {
   if (type === "tutor" && !["male", "female"].includes(gender)) {
     return res.status(400).json({ error: "النوع (معلم/معلمة) مطلوب" });
   }
-  if (!name || !phone || !email || !country || !nationality || !dob || !subject || !price) {
-    return res.status(400).json({ error: "البيانات الأساسية (الاسم، الهاتف، الإيميل، الدولة، الجنسية، تاريخ الميلاد، التخصص، السعر) مطلوبة" });
+  if (!name || !phone || !email || !national_id || !country || !nationality || !dob || !subject || !price) {
+    return res.status(400).json({ error: "البيانات الأساسية (الاسم، الهاتف، الإيميل، الرقم القومي/المدني، الدولة، الجنسية، تاريخ الميلاد، التخصص، السعر) مطلوبة" });
   }
   if (!password || String(password).length < 6) {
     return res.status(400).json({ error: "كلمة السر مطلوبة ولازم تكون 6 حروف/أرقام على الأقل" });
   }
-  if (state.providers.some((p) => p.phone === phone)) {
-    return res.status(409).json({ error: "رقم الهاتف ده مسجل بالفعل" });
+  if (phoneTaken(phone)) {
+    return res.status(409).json({ error: "رقم الهاتف ده مسجل بالفعل بحساب تاني على المنصة" });
   }
-  if (state.providers.some((p) => p.email.toLowerCase() === String(email).toLowerCase())) {
-    return res.status(409).json({ error: "البريد الإلكتروني ده مسجل بالفعل" });
+  if (emailTaken(email)) {
+    return res.status(409).json({ error: "البريد الإلكتروني ده مسجل بالفعل بحساب تاني على المنصة" });
   }
-  if (username && state.providers.some((p) => p.username && p.username.toLowerCase() === String(username).toLowerCase())) {
+  if (nationalIdTaken(national_id)) {
+    return res.status(409).json({ error: "الرقم القومي/المدني ده مسجل بالفعل بحساب تاني على المنصة" });
+  }
+  if (usernameTaken(username)) {
     return res.status(409).json({ error: "اسم المستخدم ده مستخدم بالفعل" });
   }
   if (!["online", "in_person", "both"].includes(mode)) {
@@ -163,7 +197,7 @@ app.post("/api/providers", (req, res) => {
 
   const p = {
     id: state.nextIds.provider++,
-    type, gender: type === "tutor" ? gender : "", name, username: username || "", phone, email,
+    type, gender: type === "tutor" ? gender : "", name, username: username || "", phone, email, national_id,
     country, area: area || "", nationality, dob,
     stage: stage || "", subject, degree: degree || "", experience_years: parseInt(experience_years, 10) || 0,
     mode, group_type, max_students: group_type === "group" ? (parseInt(max_students, 10) || 2) : 1,
@@ -225,28 +259,31 @@ app.post("/api/providers/:id/reviews", (req, res) => {
 
 // ---------- seekers (parent أو student) ----------
 app.post("/api/seekers", (req, res) => {
-  const { type, name, username, phone, email, country, area, nationality, dob, children_count, password } = req.body || {};
+  const { type, name, username, phone, email, national_id, country, area, nationality, dob, children_count, password } = req.body || {};
   if (!["parent", "student"].includes(type)) {
     return res.status(400).json({ error: "نوع الحساب لازم يكون ولي أمر أو طالب" });
   }
-  if (!name || !phone || !country || !nationality || !dob) {
-    return res.status(400).json({ error: "الاسم والهاتف والدولة والجنسية وتاريخ الميلاد مطلوبة" });
+  if (!name || !phone || !national_id || !country || !nationality || !dob) {
+    return res.status(400).json({ error: "الاسم والهاتف والرقم القومي/المدني والدولة والجنسية وتاريخ الميلاد مطلوبة" });
   }
   if (!password || String(password).length < 6) {
     return res.status(400).json({ error: "كلمة السر مطلوبة ولازم تكون 6 حروف/أرقام على الأقل" });
   }
-  if (state.seekers.some((s) => s.phone === phone)) {
-    return res.status(409).json({ error: "رقم الهاتف ده مسجل بالفعل" });
+  if (phoneTaken(phone)) {
+    return res.status(409).json({ error: "رقم الهاتف ده مسجل بالفعل بحساب تاني على المنصة" });
   }
-  if (email && state.seekers.some((s) => s.email && s.email.toLowerCase() === String(email).toLowerCase())) {
-    return res.status(409).json({ error: "البريد الإلكتروني ده مسجل بالفعل" });
+  if (emailTaken(email)) {
+    return res.status(409).json({ error: "البريد الإلكتروني ده مسجل بالفعل بحساب تاني على المنصة" });
   }
-  if (username && state.seekers.some((s) => s.username && s.username.toLowerCase() === String(username).toLowerCase())) {
+  if (nationalIdTaken(national_id)) {
+    return res.status(409).json({ error: "الرقم القومي/المدني ده مسجل بالفعل بحساب تاني على المنصة" });
+  }
+  if (usernameTaken(username)) {
     return res.status(409).json({ error: "اسم المستخدم ده مستخدم بالفعل" });
   }
   const s = {
     id: state.nextIds.seeker++, type, name, username: username || "", phone,
-    email: email || "", country, area: area || "", nationality, dob,
+    email: email || "", national_id, country, area: area || "", nationality, dob,
     children_count: type === "parent" ? (parseInt(children_count, 10) || 0) : 0,
     password_hash: bcrypt.hashSync(String(password), 10),
     active: true,
@@ -390,7 +427,8 @@ app.post("/api/admin/change-password", requireAdmin, (req, res) => {
 });
 app.get("/api/admin/providers", requireAdmin, (req, res) => {
   const status = req.query.status || "pending";
-  const rows = state.providers.filter((p) => p.status === status).sort((a, b) => b.id - a.id).map(stripPrivate);
+  const rows = state.providers.filter((p) => p.status === status).sort((a, b) => b.id - a.id)
+    .map((p) => ({ ...stripPrivate(p), national_id: p.national_id || "" }));
   res.json(rows);
 });
 app.post("/api/admin/providers/:id/approve", requireAdmin, (req, res) => {
@@ -477,7 +515,7 @@ app.get("/api/admin/seekers", requireAdmin, (req, res) => {
   const type = req.query.type || "";
   let rows = state.seekers.slice().sort((a, b) => b.id - a.id);
   if (type) rows = rows.filter((s) => s.type === type);
-  res.json(rows.map(stripPrivateSeeker));
+  res.json(rows.map((s) => ({ ...stripPrivateSeeker(s), national_id: s.national_id || "" })));
 });
 app.post("/api/admin/seekers/:id/suspend", requireAdmin, (req, res) => {
   const id = parseInt(req.params.id, 10);
