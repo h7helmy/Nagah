@@ -511,7 +511,31 @@ async function openProfile(id){
     document.getElementById("modal-overlay").classList.add("open");
   }catch(e){ showToast(e.message); }
 }
-function closeModal(){ document.getElementById("modal-overlay").classList.remove("open"); renderGrid(); }
+async function openSeekerProfile(id){
+  try{
+    const url = "/api/seekers/"+id+(providerUser?("?provider_id="+providerUser.id):"");
+    const s = await api(url);
+    const contactBlock = s.phone
+      ? `<div class="contact-box"><strong>📞 ${s.phone}</strong><div class="muted" style="margin-top:4px;">تواصل مباشرة لتنسيق موعد الحصة</div></div>`
+      : `<div class="contact-hidden">🔒 رقم التواصل بيظهر بس لو عندك حجز مع هذا الحساب</div>`;
+    document.getElementById("modal-content").innerHTML = `
+      <button class="modal-close" onclick="closeModal()">✕</button>
+      <div class="card-top">
+        <div class="avatar" style="width:64px;height:64px;font-size:22px;">${initials(s.name)}</div>
+        <div><div class="name" style="font-size:17px;">${s.name}</div>
+        <span class="tag">${s.type==='parent' ? '👪 ولي أمر' : '🎒 طالب'}</span>
+        <span class="badge-region">📍 ${s.country}${s.area ? " - "+s.area : ""}</span></div>
+      </div>
+      ${s.type==='parent' ? `<p style="margin-top:10px; font-size:14px;">عدد الأبناء: ${s.children_count||0}</p>` : ""}
+      <p class="muted" style="margin-top:6px; font-size:12.5px;">عضو منذ ${new Date(s.member_since).toLocaleDateString('ar-EG')}</p>
+      ${contactBlock}`;
+    document.getElementById("modal-overlay").classList.add("open");
+  }catch(e){ showToast(e.message); }
+}
+function closeModal(){
+  document.getElementById("modal-overlay").classList.remove("open");
+  if(document.getElementById("view-search").classList.contains("active")) renderGrid();
+}
 document.getElementById("modal-overlay").addEventListener("click", e=>{ if(e.target.id==="modal-overlay") closeModal(); });
 
 function openTicketModal(){
@@ -681,7 +705,7 @@ async function renderAccountView(){
       document.getElementById("pd-bookings").innerHTML = bookings.length ? bookings.map(b=>`
         <div class="card" style="cursor:default;">
           <div style="display:flex; justify-content:space-between; align-items:center;">
-            <div><div class="name">${b.seeker_name||"غير معروف"}</div><span class="muted">📞 ${b.seeker_phone||""}</span></div>
+            <div style="cursor:pointer;" onclick="openSeekerProfile(${b.seeker_id})"><div class="name">${b.seeker_name||"غير معروف"}</div><span class="muted">📞 ${b.seeker_phone||""}</span></div>
             <span class="pill">${b.status_label}</span>
           </div>
           ${b.status==="pending" ? `
@@ -715,10 +739,9 @@ async function renderAccountView(){
       list.innerHTML = bookings.length ? bookings.map(b=>`
         <div class="card" style="cursor:default;">
           <div style="display:flex; justify-content:space-between; align-items:center;">
-            <div><div class="name">${b.provider_name}</div><span class="muted">${b.subject} — ${b.price}</span></div>
+            <div style="cursor:pointer;" onclick="openProfile(${b.provider_id})"><div class="name">${b.provider_name}</div><span class="muted">${b.subject} — ${b.price}</span></div>
             <span class="pill">${b.status_label}</span>
           </div>
-          <div class="free-banner" style="margin-top:8px;">بدون عمولة على هذا الحجز (عرض السنة الأولى)</div>
         </div>`).join("") : '<div class="empty">لا توجد طلبات حجز بعد</div>';
 
       const needsReview = bookings.filter(b=>b.needs_review);

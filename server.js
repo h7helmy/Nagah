@@ -262,9 +262,28 @@ app.get("/api/providers/:id/bookings", (req, res) => {
     .sort((a, b) => b.id - a.id)
     .map((b) => {
       const s = state.seekers.find((x) => x.id === b.seeker_id) || {};
-      return { id: b.id, status: b.status, status_label: bookingStatusLabel(b.status), created_at: b.created_at, seeker_name: s.name, seeker_phone: s.phone };
+      return { id: b.id, seeker_id: b.seeker_id, status: b.status, status_label: bookingStatusLabel(b.status), created_at: b.created_at, seeker_name: s.name, seeker_phone: s.phone };
     });
   res.json(rows);
+});
+
+// ---------- seeker public profile (بروفايل عام لولي الأمر/الطالب - يظهر بس للمدرس اللي عنده حجز معاه) ----------
+app.get("/api/seekers/:id", (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const s = state.seekers.find((x) => x.id === id);
+  if (!s) return res.status(404).json({ error: "غير موجود" });
+  const providerId = parseInt(req.query.provider_id, 10);
+  let phone = null;
+  if (providerId && state.bookings.some((b) => b.provider_id === providerId && b.seeker_id === id)) {
+    phone = s.phone;
+  }
+  res.json({
+    id: s.id, name: s.name, type: s.type,
+    country: s.country, area: s.area || "",
+    children_count: s.type === "parent" ? s.children_count : undefined,
+    member_since: s.created_at,
+    phone,
+  });
 });
 
 // ---------- reviews (مقفولة على حجز مؤكد فقط عشان تكون التقييمات موثوقة) ----------
