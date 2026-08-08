@@ -136,8 +136,8 @@ async function loadStats(key){
   if(!res.ok){ banner.style.display="none"; return; }
   const s = await res.json();
   banner.style.display = "block";
-  banner.style.color = s.free_tutor_slots_left>0 ? "#166534" : "#dc2626";
-  banner.textContent = `🎁 باقي ${s.free_tutor_slots_left} من ${s.free_tutor_limit} اشتراك مجاني (سنة) للمدرسين`;
+  banner.style.color = "#166534";
+  banner.innerHTML = `🎁 المعلمات: باقي ${s.female_slots_left} من ${s.free_tutor_limit} اشتراك مجاني &nbsp;|&nbsp; المعلمين: باقي ${s.male_slots_left} من ${s.free_tutor_limit} اشتراك مجاني`;
 }
 async function load(){
   const key = localStorage.getItem("nagah_admin_key");
@@ -150,7 +150,7 @@ async function load(){
     <div class="card">
       <div class="row">
         <div>
-          <div class="name">${p.name} <span class="${p.type==='center'?'tag-center':'tag'}">${p.type==='center' ? '🏫 مركز' : '🧑‍🏫 مدرس'} - ${p.stage||""} - ${p.subject}</span></div>
+          <div class="name">${p.name} <span class="${p.type==='center'?'tag-center':'tag'}">${p.type==='center' ? '🏫 مركز' : (p.gender==='male' ? '🧑‍🏫 معلم' : '🧑‍🏫 معلمة')} - ${p.stage||""} - ${p.subject}</span></div>
           <div style="font-size:13px; color:#6b7280;">📍 ${p.country}${p.area ? " - "+p.area : ""} | ${p.price} | 📞 ${p.phone} | ${modeLabel(p.mode)} | ${p.group_type==='group' ? 'مجموعة حتى '+p.max_students : 'فردي'} | دفع ${p.payment_method==='cash'?'نقدي':'تحويل'}</div>
           <div style="font-size:12px; color:#6b7280; margin-top:4px;">${p.degree||""} ${p.experience_years?('- '+p.experience_years+' سنوات خبرة'):''} | جنسية: ${p.nationality||"-"} | ميلاد: ${p.dob||"-"}</div>
           <div style="font-size:12px; color:#6b7280; margin-top:4px;">🕒 ${(p.availability_days&&p.availability_days.length) ? p.availability_days.join("، ") : "لم يحدد أيام"} ${(p.availability_from&&p.availability_to) ? ('| '+p.availability_from+' - '+p.availability_to) : ""}</div>

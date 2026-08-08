@@ -25,8 +25,9 @@ if (state.admins.length === 0) {
   save();
 }
 
-function freeTutorSlotsUsed() {
-  return state.providers.filter((x) => x.type === "tutor" && x.subscription_start).length;
+// العرض المجاني: أول 100 معلمة وأول 100 معلم (كوتا منفصلة لكل نوع)
+function freeTutorSlotsUsed(gender) {
+  return state.providers.filter((x) => x.type === "tutor" && x.gender === gender && x.subscription_start).length;
 }
 
 function subscriptionInfo(p) {
@@ -123,7 +124,7 @@ app.get("/api/providers/:id", (req, res) => {
 // ---------- provider registration (tutor أو center) - pending review ----------
 app.post("/api/providers", (req, res) => {
   const {
-    type, name, username, phone, email, country, area, nationality, dob,
+    type, gender, name, username, phone, email, country, area, nationality, dob,
     stage, subject, degree, experience_years, mode, group_type, max_students,
     price, payment_method, bio, availability_days, availability_from, availability_to,
     password,
@@ -131,6 +132,9 @@ app.post("/api/providers", (req, res) => {
 
   if (!["tutor", "center"].includes(type)) {
     return res.status(400).json({ error: "نوع الحساب لازم يكون مدرس أو مركز تعليمي" });
+  }
+  if (type === "tutor" && !["male", "female"].includes(gender)) {
+    return res.status(400).json({ error: "النوع (معلم/معلمة) مطلوب" });
   }
   if (!name || !phone || !email || !country || !nationality || !dob || !subject || !price) {
     return res.status(400).json({ error: "البيانات الأساسية (الاسم، الهاتف، الإيميل، الدولة، الجنسية، تاريخ الميلاد، التخصص، السعر) مطلوبة" });
@@ -159,7 +163,7 @@ app.post("/api/providers", (req, res) => {
 
   const p = {
     id: state.nextIds.provider++,
-    type, name, username: username || "", phone, email,
+    type, gender: type === "tutor" ? gender : "", name, username: username || "", phone, email,
     country, area: area || "", nationality, dob,
     stage: stage || "", subject, degree: degree || "", experience_years: parseInt(experience_years, 10) || 0,
     mode, group_type, max_students: group_type === "group" ? (parseInt(max_students, 10) || 2) : 1,
@@ -396,7 +400,7 @@ app.post("/api/admin/providers/:id/approve", requireAdmin, (req, res) => {
     p.status = "approved";
     let gotFreeYear = false;
     if (!p.subscription_start) {
-      if (p.type === "center" || (p.type === "tutor" && freeTutorSlotsUsed() < FREE_TUTOR_LIMIT)) {
+      if (p.type === "center" || (p.type === "tutor" && freeTutorSlotsUsed(p.gender) < FREE_TUTOR_LIMIT)) {
         p.subscription_start = new Date().toISOString();
         p.subscription_end = new Date(Date.now() + FREE_SUBSCRIPTION_DAYS * 86400000).toISOString();
         gotFreeYear = true;
@@ -421,11 +425,14 @@ app.post("/api/admin/providers/:id/set-subscription", requireAdmin, (req, res) =
   res.json({ ok: true, subscription_end: p.subscription_end });
 });
 app.get("/api/admin/stats", requireAdmin, (req, res) => {
-  const used = freeTutorSlotsUsed();
+  const usedFemale = freeTutorSlotsUsed("female");
+  const usedMale = freeTutorSlotsUsed("male");
   res.json({
     free_tutor_limit: FREE_TUTOR_LIMIT,
-    free_tutor_slots_used: used,
-    free_tutor_slots_left: Math.max(0, FREE_TUTOR_LIMIT - used),
+    female_slots_used: usedFemale,
+    female_slots_left: Math.max(0, FREE_TUTOR_LIMIT - usedFemale),
+    male_slots_used: usedMale,
+    male_slots_left: Math.max(0, FREE_TUTOR_LIMIT - usedMale),
   });
 });
 app.post("/api/admin/providers/:id/suspend", requireAdmin, (req, res) => {
