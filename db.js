@@ -6,7 +6,7 @@ const DATA_PATH = process.env.DATA_PATH || path.join(__dirname, "data.json");
 
 function seedData() {
   return {
-    nextIds: { provider: 1, seeker: 1, review: 1, booking: 1 },
+    nextIds: { provider: 1, seeker: 1, review: 1, booking: 1, ticket: 1 },
     // providers: مدرس فردي (tutor) أو مركز تعليمي (center)
     providers: [],
     // seekers: ولي أمر (parent) أو طالب (student)
@@ -15,6 +15,7 @@ function seedData() {
     bookings: [],  // { id, provider_id, seeker_id, status, created_at }
     favorites: [], // { seeker_id, provider_id }
     admins: [],    // { username, password_hash } - حسابات السوبر أدمن
+    tickets: [],   // { id, author_kind, author_id, author_name, author_phone, subject, message, status, admin_reply, created_at }
   };
 }
 
@@ -26,8 +27,10 @@ if (fs.existsSync(DATA_PATH)) {
     if (!Array.isArray(state.providers) || !Array.isArray(state.seekers)) {
       state = seedData();
     }
-    // ترقية آمنة: لو الملف قديم ومفيهوش مصفوفة admins، نضيفها من غير ما نمسح أي بيانات موجودة
+    // ترقية آمنة: لو الملف قديم وناقصه مصفوفات جديدة، نضيفها من غير ما نمسح أي بيانات موجودة
     if (!Array.isArray(state.admins)) state.admins = [];
+    if (!Array.isArray(state.tickets)) state.tickets = [];
+    if (!state.nextIds.ticket) state.nextIds.ticket = 1;
   } catch (e) {
     state = seedData();
   }

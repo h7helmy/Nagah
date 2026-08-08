@@ -68,6 +68,9 @@
   nav.bottom button{flex:1; background:none; border:none; padding:10px 4px; font-size:11px; color:var(--muted); cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:3px;}
   nav.bottom button.active{color:var(--primary); font-weight:700;}
   nav.bottom button .ic{font-size:18px;}
+  .badge-dot{position:absolute; top:4px; inset-inline-end:14px; background:var(--accent); color:#fff; font-size:10px; font-weight:700; min-width:16px; height:16px; border-radius:50%; display:flex; align-items:center; justify-content:center; padding:0 2px;}
+  .review-reminder{background:#fff7ed; border:1px solid #fed7aa; border-radius:12px; padding:12px; margin-bottom:14px;}
+  .review-reminder .item{display:flex; justify-content:space-between; align-items:center; gap:8px; padding:6px 0;}
   .pill{display:inline-block; padding:2px 8px; border-radius:20px; font-size:11px; font-weight:600; background:#fef3c7; color:#92400e;}
   .empty{text-align:center; color:var(--muted); padding:30px 10px; font-size:13px;}
   .toast{position:fixed; top:14px; left:50%; transform:translateX(-50%); background:#111827; color:#fff; padding:10px 18px; border-radius:10px; font-size:13px; z-index:80; display:none;}
@@ -247,13 +250,21 @@
       <div class="center-title"><h2 id="pd-name">أهلًا</h2><p id="pd-status"></p></div>
       <div class="card" id="pd-subscription"></div>
       <div class="section"><h2>📩 طلبات التواصل الواردة</h2><div id="pd-bookings"></div></div>
-      <button class="btn btn-outline btn-block" onclick="providerLogout()">تسجيل خروج</button>
+      <div class="section"><h2>🎫 تذاكري</h2><div id="pd-tickets"></div></div>
+      <button class="btn btn-outline btn-block" onclick="openTicketModal()" style="margin-top:8px;">📮 تواصل مع الإدارة / فتح شكوى</button>
+      <button class="btn btn-outline btn-block" onclick="providerLogout()" style="margin-top:8px;">تسجيل خروج</button>
     </div>
     <div id="seeker-dashboard-box" style="display:none;">
       <div class="center-title"><h2 id="dash-title">أهلًا</h2><p>المدرسون والمراكز المفضلة وطلبات الحجز</p></div>
+      <div class="review-reminder" id="review-reminder" style="display:none;">
+        <strong>🌟 عندك حجوزات محتاجة تقييمك</strong>
+        <div id="review-reminder-list"></div>
+      </div>
       <div class="section"><h2>⭐ المفضلة</h2><div class="grid" id="fav-grid"></div></div>
       <div class="section"><h2>📩 طلبات التواصل / الحجوزات</h2><div id="booking-list"></div></div>
-      <button class="btn btn-outline btn-block" onclick="seekerLogout()">تسجيل خروج</button>
+      <div class="section"><h2>🎫 تذاكري</h2><div id="sk-tickets"></div></div>
+      <button class="btn btn-outline btn-block" onclick="openTicketModal()" style="margin-top:8px;">📮 تواصل مع الإدارة / فتح شكوى</button>
+      <button class="btn btn-outline btn-block" onclick="seekerLogout()" style="margin-top:8px;">تسجيل خروج</button>
     </div>
   </div>
 </div>
@@ -264,7 +275,7 @@
 <nav class="bottom">
   <button data-view="view-search" class="active"><span class="ic">🔎</span>بحث</button>
   <button data-view="view-register"><span class="ic">📝</span>تسجيل</button>
-  <button data-view="view-provider"><span class="ic">🔑</span>حسابي</button>
+  <button data-view="view-provider" style="position:relative;"><span class="ic">🔑</span>حسابي<span id="account-badge" class="badge-dot" style="display:none;"></span></button>
 </nav>
 
 <script>
@@ -503,6 +514,44 @@ async function openProfile(id){
 function closeModal(){ document.getElementById("modal-overlay").classList.remove("open"); renderGrid(); }
 document.getElementById("modal-overlay").addEventListener("click", e=>{ if(e.target.id==="modal-overlay") closeModal(); });
 
+function openTicketModal(){
+  if(!providerUser && !currentUser){ showToast("سجّل دخولك الأول"); return; }
+  document.getElementById("modal-content").innerHTML = `
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div class="center-title"><h2 style="font-size:17px;">📮 تواصل مع الإدارة</h2><p>هنراجع رسالتك ونرد عليك في أقرب وقت</p></div>
+    <form id="ticket-form">
+      <div class="field"><label>الموضوع</label><input required id="tk-subject" placeholder="مثال: مشكلة في الاشتراك"></div>
+      <div class="field"><label>تفاصيل الرسالة</label><textarea required id="tk-message" rows="4"></textarea></div>
+      <button class="btn btn-primary btn-block" type="submit">إرسال</button>
+    </form>`;
+  document.getElementById("modal-overlay").classList.add("open");
+  document.getElementById("ticket-form").addEventListener("submit", async e=>{
+    e.preventDefault();
+    try{
+      const author_kind = providerUser ? "provider" : "seeker";
+      const author_id = providerUser ? providerUser.id : currentUser.id;
+      await api("/api/tickets", { method:"POST", body: JSON.stringify({
+        author_kind, author_id, subject: v("tk-subject"), message: v("tk-message"),
+      })});
+      showToast("تم إرسال رسالتك للإدارة، هنتواصل معاك قريب");
+      document.getElementById("modal-overlay").classList.remove("open");
+      renderAccountView();
+    }catch(err){ showToast(err.message); }
+  });
+}
+function ticketsHtml(tickets){
+  if(!tickets.length) return '<div class="empty">لا توجد تذاكر بعد</div>';
+  return tickets.map(t=>`
+    <div class="card" style="cursor:default;">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div class="name">${t.subject}</div>
+        <span class="pill" style="${t.status==='resolved'?'background:#dcfce7;color:#166534;':''}">${t.status==='resolved'?'✅ اتراجعت':'⏳ قيد المراجعة'}</span>
+      </div>
+      <div class="muted" style="margin-top:4px;">${t.message}</div>
+      ${t.admin_reply ? `<div class="contact-box" style="margin-top:8px; text-align:right;"><strong>رد الإدارة:</strong><div style="margin-top:4px;">${t.admin_reply}</div></div>` : ""}
+    </div>`).join("");
+}
+
 async function rateNow(pid, n){
   if(!currentUser){ showToast("سجّل دخولك كولي أمر أو طالب الأول"); return; }
   try{
@@ -616,6 +665,7 @@ async function renderAccountView(){
 
   if(providerUser){
     dashBox.style.display = "block";
+    updateAccountBadge(0);
     try{
       const p = await api("/api/providers/"+providerUser.id+"/me");
       document.getElementById("pd-name").textContent = "أهلًا "+p.name;
@@ -641,6 +691,9 @@ async function renderAccountView(){
           </div>
           <div class="muted" style="margin-top:6px; font-size:11.5px;">التقييم من ولي الأمر/الطالب هيتفتح بس بعد ما تأكد الحجز</div>` : ""}
         </div>`).join("") : '<div class="empty">لا توجد طلبات تواصل بعد</div>';
+
+      const tickets = await api("/api/tickets?author_kind=provider&author_id="+providerUser.id);
+      document.getElementById("pd-tickets").innerHTML = ticketsHtml(tickets);
     }catch(e){ showToast(e.message); }
     return;
   }
@@ -667,11 +720,44 @@ async function renderAccountView(){
           </div>
           <div class="free-banner" style="margin-top:8px;">بدون عمولة على هذا الحجز (عرض السنة الأولى)</div>
         </div>`).join("") : '<div class="empty">لا توجد طلبات حجز بعد</div>';
+
+      const needsReview = bookings.filter(b=>b.needs_review);
+      const reminderBox = document.getElementById("review-reminder");
+      const reminderList = document.getElementById("review-reminder-list");
+      if(needsReview.length){
+        reminderBox.style.display = "block";
+        reminderList.innerHTML = needsReview.map(b=>`
+          <div class="item">
+            <span>${b.provider_name} — ${b.subject}</span>
+            <button class="btn btn-primary" style="padding:6px 12px; font-size:12px;" onclick="openProfile(${b.provider_id})">قيّم الآن</button>
+          </div>`).join("");
+      } else {
+        reminderBox.style.display = "none";
+        reminderList.innerHTML = "";
+      }
+      updateAccountBadge(needsReview.length);
+
+      const tickets = await api("/api/tickets?author_kind=seeker&author_id="+currentUser.id);
+      document.getElementById("sk-tickets").innerHTML = ticketsHtml(tickets);
     }catch(e){ showToast(e.message); }
     return;
   }
 
   loginBox.style.display = "block";
+  updateAccountBadge(0);
+}
+
+function updateAccountBadge(count){
+  const badge = document.getElementById("account-badge");
+  if(count>0){ badge.textContent = count; badge.style.display = "flex"; }
+  else { badge.style.display = "none"; }
+}
+async function checkPendingReviews(){
+  if(!currentUser) return;
+  try{
+    const bookings = await api("/api/seekers/"+currentUser.id+"/bookings");
+    updateAccountBadge(bookings.filter(b=>b.needs_review).length);
+  }catch(e){}
 }
 
 function showToast(msg){
@@ -681,6 +767,7 @@ function showToast(msg){
 }
 
 renderGrid();
+checkPendingReviews();
 </script>
 </body>
 </html>

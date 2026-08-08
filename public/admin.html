@@ -21,6 +21,8 @@
   .tabs{display:flex; gap:6px; margin:10px 0;}
   .tabs button{flex:1; padding:8px; border:1px solid #e5e7eb; background:#fff; border-radius:8px; cursor:pointer; font-size:13px;}
   .tabs button.active{background:#111827; color:#fff; border-color:#111827;}
+  .tabs button{position:relative;}
+  .badge-dot{position:absolute; top:-6px; left:-6px; background:#dc2626; color:#fff; font-size:10px; font-weight:700; min-width:16px; height:16px; border-radius:50%; display:flex; align-items:center; justify-content:center; padding:0 2px;}
 </style>
 </head>
 <body>
@@ -49,6 +51,7 @@
     <div class="tabs">
       <button data-mode="providers" class="active" onclick="setMode('providers')">المدرسون والمراكز</button>
       <button data-mode="seekers" onclick="setMode('seekers')">أولياء الأمور والطلاب</button>
+      <button data-mode="tickets" onclick="setMode('tickets')">🎫 الشكاوى<span id="tickets-badge" class="badge-dot" style="display:none;"></span></button>
     </div>
 
     <div id="providers-section">
@@ -68,16 +71,75 @@
       </div>
       <div id="seeker-list"></div>
     </div>
+
+    <div id="tickets-section" style="display:none;">
+      <div class="tabs">
+        <button data-tstatus="open" class="active" onclick="setTicketTab('open')">قيد المراجعة</button>
+        <button data-tstatus="resolved" onclick="setTicketTab('resolved')">تمت المراجعة</button>
+      </div>
+      <div id="ticket-list"></div>
+    </div>
   </div>
 </div>
 <script>
 let currentStatus = "pending";
 let currentSeekerType = "";
+let currentTicketStatus = "open";
 function setMode(mode){
   document.querySelectorAll('[data-mode]').forEach(b=>b.classList.toggle("active", b.dataset.mode===mode));
   document.getElementById("providers-section").style.display = mode==="providers" ? "block" : "none";
   document.getElementById("seekers-section").style.display = mode==="seekers" ? "block" : "none";
+  document.getElementById("tickets-section").style.display = mode==="tickets" ? "block" : "none";
   if(mode==="seekers") loadSeekers();
+  if(mode==="tickets") loadTickets();
+}
+function authorLabel(t){
+  if(t.author_kind==="provider") return t.author_type==='center' ? '🏫 مركز' : '🧑‍🏫 مدرس/ة';
+  return t.author_type==='parent' ? '👪 ولي أمر' : '🎒 طالب';
+}
+function setTicketTab(s){
+  currentTicketStatus = s;
+  document.querySelectorAll('[data-tstatus]').forEach(b=>b.classList.toggle("active", b.dataset.tstatus===s));
+  loadTickets();
+}
+async function loadTickets(){
+  const key = localStorage.getItem("nagah_admin_key");
+  const res = await fetch("/api/admin/tickets?status="+currentTicketStatus, { headers: { "x-admin-key": key } });
+  const list = document.getElementById("ticket-list");
+  if(!res.ok){ list.innerHTML = '<div class="empty">مفتاح غير صحيح أو حصل خطأ</div>'; return; }
+  const rows = await res.json();
+  list.innerHTML = rows.length ? rows.map(t=>`
+    <div class="card">
+      <div class="row">
+        <div>
+          <div class="name">${t.subject} <span class="tag">${authorLabel(t)}</span></div>
+          <div style="font-size:13px; color:#6b7280;">من: ${t.author_name} | 📞 ${t.author_phone||"-"} | ${new Date(t.created_at).toLocaleString('ar-EG')}</div>
+          <div style="font-size:14px; margin-top:6px; white-space:pre-wrap;">${t.message}</div>
+          ${t.admin_reply ? `<div style="font-size:13px; margin-top:6px; color:#166534; background:#f0fdf4; padding:6px 8px; border-radius:6px;">رد الإدارة: ${t.admin_reply}</div>` : ""}
+        </div>
+        ${t.status!=="resolved" ? `<div style="display:flex; flex-direction:column; gap:6px; min-width:200px;">
+          <textarea id="reply-${t.id}" placeholder="رد اختياري..." style="min-height:50px; font-family:inherit; padding:6px; border-radius:6px; border:1px solid #d1d5db;"></textarea>
+          <button class="btn activate" onclick="resolveTicket(${t.id})">تمت المراجعة</button>
+        </div>` : ""}
+      </div>
+    </div>`).join("") : '<div class="empty">لا يوجد تذاكر</div>';
+}
+async function resolveTicket(id){
+  const key = localStorage.getItem("nagah_admin_key");
+  const reply = document.getElementById("reply-"+id).value;
+  await fetch(`/api/admin/tickets/${id}/resolve`, { method:"POST", headers: { "Content-Type":"application/json", "x-admin-key": key }, body: JSON.stringify({ admin_reply: reply }) });
+  loadTickets();
+  checkTicketsBadge();
+}
+async function checkTicketsBadge(){
+  const key = localStorage.getItem("nagah_admin_key");
+  try{
+    const res = await fetch("/api/admin/tickets?status=open", { headers: { "x-admin-key": key } });
+    if(!res.ok) return;
+    const rows = await res.json();
+    const badge = document.getElementById("tickets-badge");
+    if(rows.length){ badge.textContent = rows.length; badge.style.display = "flex"; } else { badge.style.display = "none"; }
+  }catch(e){}
 }
 function setSeekerType(t){
   currentSeekerType = t;
@@ -235,6 +297,7 @@ function enterAdmin(){
   document.getElementById("admin-content").style.display = "block";
   document.getElementById("admin-whoami").textContent = "مسجل دخول: "+(localStorage.getItem("nagah_admin_username")||"");
   load();
+  checkTicketsBadge();
 }
 const savedKey = localStorage.getItem("nagah_admin_key");
 if(savedKey){ enterAdmin(); }

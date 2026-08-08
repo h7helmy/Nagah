@@ -370,6 +370,69 @@ app.post("/api/forgot-password", async (req, res) => {
   res.json(generic);
 });
 
+// ---------- تذاكر الشكاوى/التواصل مع الإدارة (لكل أنواع الحسابات: مدرس/معلمة/مركز/ولي أمر/طالب) ----------
+app.post("/api/tickets", async (req, res) => {
+  const { author_kind, author_id, subject, message } = req.body || {};
+  if (!["provider", "seeker"].includes(author_kind)) {
+    return res.status(400).json({ error: "نوع الحساب غير معروف" });
+  }
+  const authorId = parseInt(author_id, 10);
+  const author = author_kind === "provider"
+    ? state.providers.find((p) => p.id === authorId)
+    : state.seekers.find((s) => s.id === authorId);
+  if (!author) return res.status(401).json({ error: "لازم تسجّل دخولك الأول عشان تفتح تذكرة" });
+  if (!subject || !message) return res.status(400).json({ error: "الموضوع والرسالة مطلوبين" });
+
+  const t = {
+    id: state.nextIds.ticket++,
+    author_kind, author_id: authorId,
+    author_name: author.name, author_phone: author.phone,
+    author_type: author.type, // tutor|center|parent|student
+    subject: String(subject).slice(0, 200), message: String(message).slice(0, 3000),
+    status: "open", admin_reply: "",
+    created_at: new Date().toISOString(),
+  };
+  state.tickets.push(t);
+  save();
+
+  if (process.env.ADMIN_NOTIFY_EMAIL) {
+    try {
+      await sendMail({
+        to: process.env.ADMIN_NOTIFY_EMAIL,
+        subject: `تذكرة جديدة من ${author.name} - نجاح`,
+        text: `نوع الحساب: ${t.author_type}\nالاسم: ${t.author_name}\nالهاتف: ${t.author_phone}\nالموضوع: ${t.subject}\n\nالرسالة:\n${t.message}`,
+      });
+    } catch (e) {
+      console.error("فشل إرسال إشعار تذكرة للإدارة:", e.message);
+    }
+  }
+  res.status(201).json({ id: t.id, status: "open" });
+});
+app.get("/api/tickets", (req, res) => {
+  const authorKind = req.query.author_kind;
+  const authorId = parseInt(req.query.author_id, 10);
+  if (!["provider", "seeker"].includes(authorKind) || !authorId) return res.json([]);
+  const rows = state.tickets
+    .filter((t) => t.author_kind === authorKind && t.author_id === authorId)
+    .sort((a, b) => b.id - a.id);
+  res.json(rows);
+});
+app.get("/api/admin/tickets", requireAdmin, (req, res) => {
+  const status = req.query.status || "";
+  let rows = state.tickets.slice().sort((a, b) => b.id - a.id);
+  if (status) rows = rows.filter((t) => t.status === status);
+  res.json(rows);
+});
+app.post("/api/admin/tickets/:id/resolve", requireAdmin, (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const t = state.tickets.find((x) => x.id === id);
+  if (!t) return res.status(404).json({ error: "غير موجود" });
+  t.status = "resolved";
+  t.admin_reply = req.body && req.body.admin_reply ? String(req.body.admin_reply).slice(0, 3000) : t.admin_reply;
+  save();
+  res.json({ ok: true });
+});
+
 // ---------- favorites ----------
 app.post("/api/seekers/:sid/favorites/:pid", (req, res) => {
   const seeker_id = parseInt(req.params.sid, 10);
@@ -435,7 +498,9 @@ app.get("/api/seekers/:sid/bookings", (req, res) => {
     .sort((a, b) => b.id - a.id)
     .map((b) => {
       const p = state.providers.find((x) => x.id === b.provider_id) || {};
-      return { id: b.id, status: b.status, status_label: bookingStatusLabel(b.status), created_at: b.created_at, provider_name: p.name, subject: p.subject, price: p.price };
+      const reviewed = state.reviews.some((r) => r.provider_id === b.provider_id && r.seeker_id === seeker_id);
+      const needs_review = b.status === "confirmed" && !reviewed;
+      return { id: b.id, provider_id: b.provider_id, status: b.status, status_label: bookingStatusLabel(b.status), created_at: b.created_at, provider_name: p.name, subject: p.subject, price: p.price, needs_review };
     });
   res.json(rows);
 });
