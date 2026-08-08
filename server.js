@@ -98,6 +98,32 @@ function withRating(p) {
   return { ...stripPrivate(p), ...ratingOf(p.id) };
 }
 
+// ترتيب النتائج: تقييم موزون (بايزي، عشان معلم بتقييم 5 من مرة واحدة متطلعش فوق معلم بمتوسط 4.7 من 50 تقييم)
+// + أولوية بسيطة لنفس محافظة الباحث + بونص بسيط للنشاط الأخير (آخر دخول)
+const RATING_MIN_VOTES = 5; // m
+function globalAverageRating() {
+  if (!state.reviews.length) return 4.3; // متوسط افتراضي معقول لحد ما يكون فيه تقييمات كفاية
+  return state.reviews.reduce((a, r) => a + r.rating, 0) / state.reviews.length;
+}
+function weightedRating(rating, reviewCount) {
+  const C = globalAverageRating();
+  const v = reviewCount, m = RATING_MIN_VOTES;
+  return (v / (v + m)) * rating + (m / (v + m)) * C;
+}
+function recencyBonus(lastLoginIso) {
+  if (!lastLoginIso) return 0;
+  const days = (Date.now() - new Date(lastLoginIso).getTime()) / 86400000;
+  if (days <= 3) return 0.3;
+  if (days <= 14) return 0.15;
+  if (days <= 30) return 0.05;
+  return 0;
+}
+function searchScore(p, effectiveArea) {
+  const wr = weightedRating(p.rating, p.reviewCount);
+  const areaBonus = effectiveArea && p.area && p.area === effectiveArea ? 0.5 : 0;
+  return wr + areaBonus + recencyBonus(p.last_login);
+}
+
 app.get("/health", (req, res) => res.json({ ok: true }));
 
 // ---------- providers (tutors + centers): public search ----------
@@ -108,6 +134,8 @@ app.get("/api/providers", (req, res) => {
   const groupType = (req.query.group_type || "").trim(); // individual | group
   const type = (req.query.type || "").trim(); // tutor | center
   const stage = (req.query.stage || "").trim();
+  const areaFilter = (req.query.area || "").trim();
+  const seekerId = parseInt(req.query.seeker_id, 10);
 
   let rows = state.providers.filter((p) => p.status === "approved" && isLive(p)).map(withRating);
 
@@ -124,7 +152,14 @@ app.get("/api/providers", (req, res) => {
   if (groupType) rows = rows.filter((p) => p.group_type === groupType);
   if (type) rows = rows.filter((p) => p.type === type);
 
-  rows.sort((a, b) => b.rating - a.rating || b.reviewCount - a.reviewCount);
+  // القرب الجغرافي: لو محدد محافظة فلتر بيها، أو استنتجها من محافظة الباحث المسجل دخوله
+  let effectiveArea = areaFilter;
+  if (!effectiveArea && seekerId) {
+    const seeker = state.seekers.find((s) => s.id === seekerId);
+    if (seeker) effectiveArea = seeker.area || "";
+  }
+
+  rows.sort((a, b) => searchScore(b, effectiveArea) - searchScore(a, effectiveArea) || b.reviewCount - a.reviewCount);
   res.json(rows);
 });
 
@@ -301,6 +336,8 @@ app.post("/api/login", (req, res) => {
   const p = state.providers.find((x) => x.phone === phone);
   if (p && bcrypt.compareSync(String(password), p.password_hash)) {
     if (p.active === false) return res.status(403).json({ error: "الحساب موقوف حاليًا من الإدارة" });
+    p.last_login = new Date().toISOString();
+    save();
     return res.json({ kind: "provider", ...stripPrivate(p) });
   }
   const s = state.seekers.find((x) => x.phone === phone);

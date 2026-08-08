@@ -404,6 +404,8 @@ async function renderGrid(){
   if(country) params.set("country", country);
   if(mode) params.set("mode", mode);
   if(groupType) params.set("group_type", groupType);
+  if(area) params.set("area", area);
+  if(currentUser) params.set("seeker_id", currentUser.id);
   try{
     const rows = await api("/api/providers?"+params.toString());
     lastProviders = rows;
